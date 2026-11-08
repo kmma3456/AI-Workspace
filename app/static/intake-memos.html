@@ -1,0 +1,397 @@
+<!doctype html>
+
+<html lang="ko">
+
+<head>
+
+  <meta charset="utf-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>접수 메모 - AI 직원</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+
+  <link rel="stylesheet" href="/ui/admin.css?v=51">
+  <link rel="stylesheet" href="/ui/admin-pages-mobile.css?v=3">
+
+</head>
+
+<body class="dash-app">
+
+  <aside class="dash-sidebar">
+
+    <div class="dash-brand">
+
+      <div class="dash-brand-icon">AI</div>
+
+      <div>
+
+        <h1>AI 직원</h1>
+
+        <p>24시간 응대하는<br>우리 매장의 AI 비서</p>
+
+      </div>
+
+    </div>
+
+    <div class="dash-sidebar-user">
+      <span class="dash-sidebar-user-meta"><span class="dot"></span><span class="dash-sidebar-user-name" id="sidebar-business">OO업체</span></span>
+      <button type="button" class="dash-sidebar-logout" id="btn-logout">로그아웃</button>
+    </div>
+
+    <nav class="dash-nav">
+
+      <a href="/ui/admin.html"><span class="ico ico-home"></span> 직원 데스크</a>
+
+      <a href="/ui/conversations.html"><span class="ico ico-chat"></span> 고객 대화</a>
+
+      <a href="/ui/activity.html"><span class="ico ico-clock"></span> 전체 활동</a>
+
+      <a href="/ui/intake-memos.html" class="active"><span class="ico ico-list"></span> 접수 메모 <span class="dash-nav-badge" id="nav-intake-badge" hidden></span></a>
+
+      <a href="/ui/settings.html"><span class="ico ico-gear"></span> 운영 설정</a>
+      <a href="/ui/accounts.html"><span class="ico ico-doc"></span> 계정 관리</a>
+
+    </nav>
+
+  </aside>
+
+
+
+  <div class="dash-main dash-main--sub">
+
+    <div class="dash-subpage dash-subpage--memos">
+
+      <header class="dash-subpage-head">
+
+        <h1>접수 메모</h1>
+
+        <p class="dash-subpage-desc">부재중·접수 문자를 Keep처럼 카드로 봅니다.</p>
+
+      </header>
+
+      <div class="dash-memo-toolbar">
+
+        <select id="filter-pending" class="dash-memo-filter-select" aria-label="메모 필터">
+
+          <option value="pending" selected>미연락만</option>
+
+          <option value="all">전체</option>
+
+        </select>
+
+        <div class="dash-memo-toolbar-end">
+
+          <button type="button" id="btn-refresh" class="dash-setting-btn dash-setting-btn--outline">새로고침</button>
+
+          <a class="dash-memo-sheet-link" id="sheet-link" href="#" target="_blank" rel="noopener">시트에서 열기</a>
+
+        </div>
+
+      </div>
+
+      <div id="memo-list" class="dash-memo-list"></div>
+
+      <nav id="memo-pagination" class="dash-memo-pagination" aria-label="페이지"></nav>
+
+    </div>
+
+  </div>
+
+
+
+  <script src="/ui/common.js"></script>
+
+  <script src="/ui/dash-shared.js?v=5"></script>
+
+  <script>
+
+    const $ = (id) => document.getElementById(id);
+
+    const PAGE_SIZE = 12;
+
+    let offset = 0;
+
+    let total = 0;
+
+    let statusOptions = [];
+
+    const openMemoRows = new Set();
+
+    const MEMO_STATUS_OPTIONS = [
+      "미연락 (대표 확인 필요)",
+      "연락완료",
+      "처리완료",
+      "보류",
+    ];
+
+    function sheetRowOf(row) {
+      const n = row.sheet_row ?? row._row;
+      return n != null && n !== "" ? Number(n) : 0;
+    }
+
+
+
+    function isPendingStatus(status) {
+
+      return (status || "").includes("미연락");
+
+    }
+
+
+
+    function statusButtonsHtml(row) {
+
+      const sheetRow = sheetRowOf(row);
+
+      const current = row["조치상태"] || "";
+
+      const options = statusOptions.length ? statusOptions : MEMO_STATUS_OPTIONS;
+
+      if (!sheetRow) return "";
+
+      const buttons = options.map((st) => {
+
+        const active = st === current ? "is-active" : "";
+
+        return `<button type="button" class="${active}" data-set-status="${esc(st)}" data-row="${sheetRow}">${esc(st)}</button>`;
+
+      }).join("");
+
+      return `<div class="dash-memo-actions">${buttons}</div>`;
+
+    }
+
+
+
+    function memoCardHtml(row) {
+
+      const pending = isPendingStatus(row["조치상태"]);
+
+      const rowKey = String(sheetRowOf(row) || "");
+
+      const opened = rowKey && openMemoRows.has(rowKey);
+
+      const body = row["메모전문"] || row["본문"] || "";
+
+      const preview = row["남긴용건"] && row["남긴용건"] !== "—"
+
+        ? row["남긴용건"]
+
+        : (row["문의·증상"] && row["문의·증상"] !== "—" ? row["문의·증상"] : "");
+
+      return `<article class="dash-memo-card ${pending ? "pending" : "done"}" data-sheet-row="${sheetRowOf(row) || ""}">
+
+        <header class="dash-memo-card-head">
+
+          <span class="dash-memo-pill">${esc(row["상담분류"] || "")}</span>
+
+          <time>${esc(row["등록일시"] || "")}</time>
+
+        </header>
+
+        <h2 class="dash-memo-card-title">${esc(row["제목"] || "")}</h2>
+
+        ${preview ? `<p class="dash-memo-card-preview">${esc(preview)}</p>` : ""}
+
+        ${body ? `<button type="button" class="dash-memo-toggle" data-memo-toggle>${opened ? "내용 접기" : "내용 보기"}</button>
+        <pre class="dash-memo-card-body"${opened ? "" : " hidden"}>${esc(body)}</pre>` : ""}
+
+        <footer class="dash-memo-card-foot">
+
+          <span>${esc(fmtPhone(row["전화번호"] || ""))}</span>
+
+          <span class="dash-memo-status">${esc(row["조치상태"] || "")}</span>
+
+        </footer>
+
+        ${statusButtonsHtml(row)}
+
+      </article>`;
+
+    }
+
+
+
+    function renderPagination() {
+
+      const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+      const page = Math.floor(offset / PAGE_SIZE) + 1;
+
+      const prevDisabled = offset <= 0;
+
+      const nextDisabled = offset + PAGE_SIZE >= total;
+
+      $("memo-pagination").innerHTML = `
+
+        <button type="button" id="memo-prev" ${prevDisabled ? "disabled" : ""}>이전</button>
+
+        <span>${page} / ${pages} · 총 ${total}건</span>
+
+        <button type="button" id="memo-next" ${nextDisabled ? "disabled" : ""}>다음</button>`;
+
+      $("memo-prev")?.addEventListener("click", () => {
+
+        offset = Math.max(0, offset - PAGE_SIZE);
+
+        refresh();
+
+      });
+
+      $("memo-next")?.addEventListener("click", () => {
+
+        if (offset + PAGE_SIZE < total) {
+
+          offset += PAGE_SIZE;
+
+          refresh();
+
+        }
+
+      });
+
+    }
+
+
+
+    async function refresh() {
+
+      const pendingOnly = $("filter-pending").value === "pending";
+
+      const q = new URLSearchParams({
+
+        limit: String(PAGE_SIZE),
+
+        offset: String(offset),
+
+        pending_only: pendingOnly ? "true" : "false",
+
+      });
+
+      const data = await api(`/intake-memos?${q}`);
+
+      total = data.total ?? 0;
+
+      statusOptions = data.status_options?.length ? data.status_options : MEMO_STATUS_OPTIONS;
+
+      if (data.sheet_url) {
+
+        $("sheet-link").href = data.sheet_url;
+
+        $("sheet-link").style.display = "";
+
+      } else {
+
+        $("sheet-link").style.display = "none";
+
+      }
+
+      if (offset > 0 && offset >= total) {
+        offset = 0;
+        return refresh();
+      }
+
+      const items = data.items || [];
+
+      $("memo-list").innerHTML = items.length
+
+        ? items.map(memoCardHtml).join("")
+
+        : `<div class="dash-empty" style="grid-column:1/-1;">표시할 접수 메모가 없습니다.</div>`;
+
+      renderPagination();
+
+    }
+
+
+
+    $("memo-list").addEventListener("click", async (e) => {
+
+      const toggle = e.target.closest("[data-memo-toggle]");
+
+      if (toggle) {
+
+        const card = toggle.closest(".dash-memo-card");
+
+        const bodyEl = card?.querySelector(".dash-memo-card-body");
+
+        if (!bodyEl) return;
+
+        const open = bodyEl.hidden;
+
+        bodyEl.hidden = !open;
+
+        toggle.textContent = open ? "내용 접기" : "내용 보기";
+
+        const rowKey = card.dataset.sheetRow || "";
+
+        if (rowKey) {
+
+          if (open) openMemoRows.add(rowKey);
+
+          else openMemoRows.delete(rowKey);
+
+        }
+
+        return;
+
+      }
+
+      const btn = e.target.closest("[data-set-status]");
+
+      if (!btn) return;
+
+      const row = Number(btn.dataset.row);
+
+      const status = btn.dataset.setStatus;
+
+      btn.disabled = true;
+
+      try {
+
+        await api(`/intake-memos/${row}/status`, { method: "PATCH", body: { status } });
+
+        await refresh();
+
+      } catch (err) {
+
+        alert(err.message || "상태 변경에 실패했습니다.");
+
+        btn.disabled = false;
+
+      }
+
+    });
+
+
+
+    $("btn-refresh").addEventListener("click", refresh);
+
+    $("filter-pending").addEventListener("change", () => {
+
+      offset = 0;
+
+      refresh();
+
+    });
+
+
+
+    ensureSession().then(() => {
+    refreshSidebarBusiness();
+    refresh();
+    startPolling(() => {
+      refreshSidebarBusiness();
+      refresh();
+    }, 30000);
+    });
+
+  </script>
+
+</body>
+
+</html>
+
+

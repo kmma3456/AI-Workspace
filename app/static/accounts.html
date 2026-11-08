@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>계정 관리 - AI 직원</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="/ui/admin.css?v=49">
+</head>
+<body class="dash-app">
+  <aside class="dash-sidebar">
+    <div class="dash-brand">
+      <div class="dash-brand-icon">AI</div>
+      <div>
+        <h1>AI 직원</h1>
+        <p>24시간 응대하는<br>우리 매장의 AI 비서</p>
+      </div>
+    </div>
+    <div class="dash-sidebar-user">
+      <span class="dash-sidebar-user-meta"><span class="dot"></span><span class="dash-sidebar-user-name" id="sidebar-business">OO업체</span></span>
+      <button type="button" class="dash-sidebar-logout" id="btn-logout">로그아웃</button>
+    </div>
+    <nav class="dash-nav">
+      <a href="/ui/admin.html"><span class="ico ico-home"></span> 직원 데스크</a>
+      <a href="/ui/conversations.html"><span class="ico ico-chat"></span> 고객 대화</a>
+      <a href="/ui/activity.html"><span class="ico ico-clock"></span> 전체 활동</a>
+      <a href="/ui/intake-memos.html"><span class="ico ico-list"></span> 접수 메모 <span class="dash-nav-badge" id="nav-intake-badge" hidden></span></a>
+      <a href="/ui/settings.html"><span class="ico ico-gear"></span> 운영 설정</a>
+      <a href="/ui/accounts.html" class="active"><span class="ico ico-doc"></span> 계정 관리</a>
+    </nav>
+  </aside>
+
+  <div class="dash-main dash-main--sub">
+    <div class="dash-subpage dash-subpage--accounts">
+      <header class="dash-subpage-head">
+        <h1>계정 관리</h1>
+        <p class="dash-subpage-desc">관리 화면에 로그인할 수 있는 관리자 계정입니다.</p>
+      </header>
+
+      <div class="dash-acct-session" id="acct-session">
+        <div class="dash-acct-session-icon" aria-hidden="true">👤</div>
+        <div class="dash-acct-session-text">
+          <span class="dash-acct-session-label">현재 로그인</span>
+          <strong id="me-email">—</strong>
+        </div>
+      </div>
+
+      <div class="dash-accounts-grid">
+        <section class="dash-setting-card dash-acct-list-card">
+          <div class="dash-setting-card-top dash-acct-list-head">
+            <div class="dash-setting-card-title">
+              <span class="dash-setting-ico dash-setting-ico--shield" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3l8 3v6c0 5-3.5 9-8 9s-8-4-8-9V6l8-3z" stroke="currentColor" stroke-width="1.6"/></svg>
+              </span>
+              <div>
+                <h2>관리자</h2>
+                <p id="acct-count">불러오는 중…</p>
+              </div>
+            </div>
+          </div>
+          <div id="user-list" class="dash-acct-cards"></div>
+        </section>
+
+        <aside class="dash-setting-card dash-acct-add-card">
+          <div class="dash-setting-card-top">
+            <div class="dash-setting-card-title">
+              <span class="dash-setting-ico dash-setting-ico--bot" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </span>
+              <div>
+                <h2>새 관리자</h2>
+                <p>비밀번호 8자 이상</p>
+              </div>
+            </div>
+          </div>
+          <div class="dash-acct-add-form">
+            <label class="dash-acct-field">
+              <span>이메일</span>
+              <input type="email" id="new-email" autocomplete="off" placeholder="name@example.com">
+            </label>
+            <label class="dash-acct-field">
+              <span>비밀번호</span>
+              <input type="password" id="new-password" minlength="8" autocomplete="new-password" placeholder="8자 이상">
+            </label>
+            <button type="button" id="btn-add-user" class="dash-setting-btn dash-setting-btn--primary dash-setting-btn--wide">계정 추가</button>
+            <p class="dash-acct-toast" id="add-user-msg" hidden></p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <script src="/ui/common.js"></script>
+  <script src="/ui/dash-shared.js?v=5"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let meId = null;
+
+    function avatarLetter(email) {
+      const c = (email || "?").trim()[0];
+      return c ? c.toUpperCase() : "?";
+    }
+
+    function showToast(el, text) {
+      el.textContent = text;
+      el.hidden = false;
+      setTimeout(() => { el.hidden = true; }, 2600);
+    }
+
+    async function loadUsers() {
+      const data = await api("/admin/users");
+      const items = data.items || [];
+      $("acct-count").textContent = `${items.length}명 · 중지된 계정은 로그인할 수 없습니다`;
+      const list = $("user-list");
+      if (!items.length) {
+        list.innerHTML = `<div class="dash-empty">등록된 관리자가 없습니다.</div>`;
+        return;
+      }
+      list.innerHTML = items.map((u) => {
+        const isMe = meId != null && u.id === meId;
+        return `
+        <div class="dash-acct-card${u.disabled ? " is-disabled" : ""}${isMe ? " is-me" : ""}" data-id="${u.id}">
+          <div class="dash-acct-card-top">
+            <div class="dash-acct-avatar" aria-hidden="true">${esc(avatarLetter(u.email))}</div>
+            <div class="dash-acct-meta">
+              <div class="dash-acct-email">${esc(u.email)}${isMe ? ' <span class="dash-acct-me-tag">나</span>' : ""}</div>
+              <div class="dash-acct-meta-sub">${u.disabled ? "로그인 불가" : "관리자"}</div>
+            </div>
+            <span class="dash-acct-status ${u.disabled ? "off" : "on"}">${u.disabled ? "중지" : "사용 중"}</span>
+          </div>
+          <div class="dash-acct-card-actions">
+            <label class="dash-acct-field dash-acct-field--inline">
+              <span class="sr-only">새 비밀번호</span>
+              <input type="password" class="dash-acct-pw-input" data-pw-for="${u.id}" placeholder="새 비밀번호 (8자+)" minlength="8">
+            </label>
+            <button type="button" class="dash-setting-btn dash-setting-btn--outline dash-acct-btn" data-save-pw="${u.id}">비밀번호 변경</button>
+            <button type="button" class="dash-setting-btn dash-acct-btn ${u.disabled ? "dash-setting-btn--primary" : "dash-setting-btn--outline"}" data-toggle="${u.id}" data-disabled="${u.disabled ? "0" : "1"}"${isMe && !u.disabled ? " disabled title=\"본인 계정은 여기서 중지할 수 없습니다\"" : ""}>${u.disabled ? "다시 사용" : "계정 중지"}</button>
+          </div>
+        </div>`;
+      }).join("");
+    }
+
+    $("user-list").addEventListener("click", async (e) => {
+      const btn = e.target.closest("button");
+      if (!btn || btn.disabled) return;
+      const saveId = btn.dataset.savePw;
+      if (saveId) {
+        const pw = document.querySelector(`[data-pw-for="${saveId}"]`)?.value || "";
+        if (pw.length < 8) return alert("비밀번호는 8자 이상입니다.");
+        await api(`/admin/users/${saveId}`, { method: "PATCH", body: { password: pw } });
+        document.querySelector(`[data-pw-for="${saveId}"]`).value = "";
+        showToast($("add-user-msg"), "비밀번호를 변경했습니다.");
+        return;
+      }
+      const toggleId = btn.dataset.toggle;
+      if (toggleId) {
+        const disabled = btn.dataset.disabled === "1";
+        if (!confirm(disabled ? "이 계정을 중지할까요?" : "다시 사용하도록 할까요?")) return;
+        await api(`/admin/users/${toggleId}`, { method: "PATCH", body: { disabled } });
+        await loadUsers();
+      }
+    });
+
+    $("btn-add-user").addEventListener("click", async () => {
+      const email = $("new-email").value.trim();
+      const password = $("new-password").value;
+      if (!email || password.length < 8) return alert("이메일과 비밀번호(8자+)를 입력하세요.");
+      try {
+        await api("/admin/users", { method: "POST", body: { email, password } });
+        $("new-email").value = "";
+        $("new-password").value = "";
+        showToast($("add-user-msg"), "관리자 계정을 추가했습니다.");
+        await loadUsers();
+      } catch (err) {
+        alert(err.message || "추가 실패");
+      }
+    });
+
+
+    ensureSession().then(async () => {
+      refreshSidebarBusiness();
+      const me = await api("/auth/me");
+      meId = me.user?.id;
+      $("me-email").textContent = me.user?.email || "—";
+      await loadUsers();
+    });
+  </script>
+</body>
+</html>

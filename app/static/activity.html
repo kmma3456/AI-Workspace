@@ -1,0 +1,552 @@
+<!doctype html>
+
+<html lang="ko">
+
+<head>
+
+  <meta charset="utf-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>전체 활동 - AI 직원</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+
+  <link rel="stylesheet" href="/ui/admin.css?v=51">
+  <link rel="stylesheet" href="/ui/admin-pages-mobile.css?v=3">
+
+</head>
+
+<body class="dash-app">
+
+  <aside class="dash-sidebar">
+
+    <div class="dash-brand">
+
+      <div class="dash-brand-icon">AI</div>
+
+      <div>
+
+        <h1>AI 직원</h1>
+
+        <p>24시간 응대하는<br>우리 매장의 AI 비서</p>
+
+      </div>
+
+    </div>
+
+    <div class="dash-sidebar-user">
+      <span class="dash-sidebar-user-meta"><span class="dot"></span><span class="dash-sidebar-user-name" id="sidebar-business">OO업체</span></span>
+      <button type="button" class="dash-sidebar-logout" id="btn-logout">로그아웃</button>
+    </div>
+
+    <nav class="dash-nav">
+
+      <a href="/ui/admin.html"><span class="ico ico-home"></span> 직원 데스크</a>
+      <a href="/ui/conversations.html"><span class="ico ico-chat"></span> 고객 대화</a>
+      <a href="/ui/activity.html" class="active"><span class="ico ico-clock"></span> 전체 활동</a>
+      <a href="/ui/intake-memos.html"><span class="ico ico-list"></span> 접수 메모 <span class="dash-nav-badge" id="nav-intake-badge" hidden></span></a>
+      <a href="/ui/settings.html"><span class="ico ico-gear"></span> 운영 설정</a>
+      <a href="/ui/accounts.html"><span class="ico ico-doc"></span> 계정 관리</a>
+
+    </nav>
+
+  </aside>
+
+
+
+  <div class="dash-main dash-main--sub">
+
+    <div class="dash-subpage dash-subpage--activity">
+
+      <header class="dash-subpage-head">
+
+        <h1>전체 활동</h1>
+
+        <p class="dash-subpage-desc">AI 직원의 상담·문자·알림을 한곳에서 확인합니다.</p>
+
+      </header>
+
+
+
+      <div class="dash-panel dash-page-card dash-panel--activity-page">
+
+        <div class="dash-activity-top dash-activity-top--tabs-only">
+
+          <div class="dash-side-tabs" id="side-tabs">
+
+            <button type="button" class="active" data-pane="activity">직원 활동</button>
+
+            <button type="button" data-pane="notif">시스템 알림</button>
+
+          </div>
+
+        </div>
+
+
+
+        <section id="activity-stack" class="dash-activity-body">
+
+          <div class="dash-filter-bar">
+
+            <label class="dash-period-field dash-period-field--dates">
+
+              <span class="dash-period-label">조회 기간</span>
+
+              <div class="dash-date-range">
+
+                <input type="date" id="activity-from" aria-label="시작일">
+
+                <span class="dash-date-sep" aria-hidden="true">~</span>
+
+                <input type="date" id="activity-to" aria-label="종료일">
+
+              </div>
+
+            </label>
+
+            <label class="dash-activity-search dash-activity-search--inline">
+
+              <span class="dash-activity-search-ico" aria-hidden="true">🔍</span>
+
+              <input type="search" id="activity-q" placeholder="고객 번호·메시지 검색" autocomplete="off">
+
+            </label>
+
+          </div>
+
+          <p class="dash-activity-meta" id="activity-meta" aria-live="polite"></p>
+
+          <div class="dash-timeline-wrap dash-timeline-wrap--page">
+
+            <div class="dash-timeline dash-timeline--feed" id="activity-timeline"></div>
+
+          </div>
+
+          <nav class="dash-pagination" id="activity-pagination" aria-label="활동 페이지" hidden></nav>
+
+        </section>
+
+
+
+        <section id="notif-stack" class="dash-activity-body" hidden>
+
+          <div class="dash-filter-bar">
+
+            <label class="dash-period-field dash-period-field--dates">
+
+              <span class="dash-period-label">조회 기간</span>
+
+              <div class="dash-date-range">
+
+                <input type="date" id="notif-from" aria-label="알림 시작일">
+
+                <span class="dash-date-sep" aria-hidden="true">~</span>
+
+                <input type="date" id="notif-to" aria-label="알림 종료일">
+
+              </div>
+
+            </label>
+
+            <label class="dash-activity-search dash-activity-search--inline">
+
+              <span class="dash-activity-search-ico" aria-hidden="true">🔍</span>
+
+              <input type="search" id="notif-q" placeholder="알림 내용 검색" autocomplete="off">
+
+            </label>
+
+          </div>
+
+          <p class="dash-activity-meta" id="notif-meta" aria-live="polite"></p>
+
+          <div class="dash-timeline-wrap dash-timeline-wrap--page">
+
+            <div class="dash-timeline dash-timeline--feed" id="notifications"></div>
+
+          </div>
+
+          <nav class="dash-pagination" id="notif-pagination" aria-label="알림 페이지" hidden></nav>
+
+        </section>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <script src="/ui/common.js"></script>
+
+  <script src="/ui/dash-shared.js?v=5"></script>
+
+  <script>
+
+    const $ = (id) => document.getElementById(id);
+
+    const ACTIVITY_PAGE_SIZE = 20;
+
+    const NOTIF_PAGE_SIZE = 15;
+
+    let allConversations = [];
+
+    let activityPage = 1;
+
+    let notifPage = 1;
+
+    let notifAll = [];
+
+    let searchTimer = null;
+
+
+
+    function parseActivityResponse(res) {
+
+      if (Array.isArray(res)) return { items: res, total: res.length };
+
+      const items = res.items || [];
+
+      return { items, total: res.total ?? items.length };
+
+    }
+
+
+
+    function setActivePane(which) {
+
+      const isActivity = which === "activity";
+
+      $("activity-stack").hidden = !isActivity;
+
+      $("notif-stack").hidden = isActivity;
+
+      if (!isActivity) refreshNotificationsView();
+
+    }
+
+
+
+    document.querySelectorAll("#side-tabs button").forEach((btn) => {
+
+      btn.addEventListener("click", () => {
+
+        document.querySelectorAll("#side-tabs button").forEach((b) => b.classList.remove("active"));
+
+        btn.classList.add("active");
+
+        setActivePane(btn.dataset.pane);
+
+      });
+
+    });
+
+
+
+    function activityParams() {
+
+      const params = new URLSearchParams();
+
+      params.set("limit", String(ACTIVITY_PAGE_SIZE));
+
+      params.set("offset", String((activityPage - 1) * ACTIVITY_PAGE_SIZE));
+
+      const from = $("activity-from").value;
+
+      const to = $("activity-to").value;
+
+      if (from) params.set("date_from", from);
+
+      if (to) params.set("date_to", to);
+
+      const q = $("activity-q").value.trim();
+
+      if (q) params.set("q", q);
+
+      return params;
+
+    }
+
+
+
+    async function refreshActivity() {
+
+      let res;
+
+      try {
+
+        res = await api(`/activity?${activityParams()}`);
+
+      } catch (e) {
+
+        console.error(e);
+
+        $("activity-timeline").innerHTML = `<div class="dash-empty">활동을 불러오지 못했습니다</div>`;
+
+        return;
+
+      }
+
+      const { items, total } = parseActivityResponse(res);
+
+      const hasFilter = $("activity-q").value.trim() || $("activity-from").value || $("activity-to").value;
+
+      const emptyText = hasFilter ? "선택한 기간·검색에 맞는 활동이 없습니다" : "활동 내역이 없습니다";
+
+      $("activity-meta").textContent = total ? `총 ${total.toLocaleString("ko-KR")}건` : "";
+
+      renderActivityFeed($("activity-timeline"), items, emptyText, allConversations);
+
+      renderDashPagination($("activity-pagination"), {
+
+        page: activityPage,
+
+        pageSize: ACTIVITY_PAGE_SIZE,
+
+        total,
+
+        onPage: (p) => {
+
+          activityPage = p;
+
+          refreshActivity();
+
+        },
+
+      });
+
+    }
+
+
+
+    function parseNotifAt(at) {
+
+      const m = String(at || "").match(/^(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
+
+      if (!m) {
+
+        const t = Date.parse(at || "");
+
+        return Number.isNaN(t) ? NaN : t;
+
+      }
+
+      const now = new Date();
+
+      const d = new Date(now.getFullYear(), Number(m[1]) - 1, Number(m[2]), Number(m[3]), Number(m[4]), Number(m[5]));
+
+      if (d.getTime() - now.getTime() > 24 * 60 * 60 * 1000) d.setFullYear(d.getFullYear() - 1);
+
+      return d.getTime();
+
+    }
+
+
+
+    function dayBoundMs(value, end) {
+
+      if (!value) return null;
+
+      const [y, mo, d] = value.split("-").map(Number);
+
+      if (!y || !mo || !d) return null;
+
+      return end ? new Date(y, mo - 1, d, 23, 59, 59, 999).getTime() : new Date(y, mo - 1, d).getTime();
+
+    }
+
+
+
+    function filterNotifications(items) {
+
+      let list = items;
+
+      const fromMs = dayBoundMs($("notif-from").value, false);
+
+      const toMs = dayBoundMs($("notif-to").value, true);
+
+      if (fromMs != null || toMs != null) {
+
+        list = list.filter((n) => {
+
+          const t = parseNotifAt(n.at);
+
+          if (Number.isNaN(t)) return false;
+
+          if (fromMs != null && t < fromMs) return false;
+
+          if (toMs != null && t > toMs) return false;
+
+          return true;
+
+        });
+
+      }
+
+      const q = $("notif-q").value.trim().toLowerCase();
+
+      if (!q) return list;
+
+      return list.filter((n) => `${n.text || ""} ${n.at || ""}`.toLowerCase().includes(q));
+
+    }
+
+
+
+    function refreshNotificationsView() {
+
+      const filtered = filterNotifications(notifAll);
+
+      const total = filtered.length;
+
+      const start = (notifPage - 1) * NOTIF_PAGE_SIZE;
+
+      const slice = filtered.slice(start, start + NOTIF_PAGE_SIZE);
+
+      const hasFilter = $("notif-q").value.trim() || $("notif-from").value || $("notif-to").value;
+
+      const emptyText = hasFilter ? "선택한 기간·검색에 맞는 알림이 없습니다" : "알림이 없습니다";
+
+      $("notif-meta").textContent = total ? `총 ${total.toLocaleString("ko-KR")}건` : "";
+
+      if (slice.length) {
+
+        renderNotificationsFeed($("notifications"), slice);
+
+      } else {
+
+        $("notifications").innerHTML = `<div class="dash-empty">${emptyText}</div>`;
+
+      }
+
+      renderDashPagination($("notif-pagination"), {
+
+        page: notifPage,
+
+        pageSize: NOTIF_PAGE_SIZE,
+
+        total,
+
+        onPage: (p) => {
+
+          notifPage = p;
+
+          refreshNotificationsView();
+
+        },
+
+      });
+
+    }
+
+
+
+    async function load() {
+
+      try {
+
+        allConversations = await api("/conversations");
+
+      } catch {
+
+        allConversations = [];
+
+      }
+
+      const notifs = await api("/notifications");
+
+      notifAll = notifs;
+
+      await Promise.all([refreshActivity(), refreshSidebarBusiness()]);
+
+    }
+
+
+
+    ["activity-from", "activity-to"].forEach((id) => {
+
+      $(id).addEventListener("change", () => {
+
+        activityPage = 1;
+
+        refreshActivity();
+
+      });
+
+    });
+
+    $("activity-q").addEventListener("input", () => {
+
+      clearTimeout(searchTimer);
+
+      searchTimer = setTimeout(() => {
+
+        activityPage = 1;
+
+        refreshActivity();
+
+      }, 350);
+
+    });
+
+    $("activity-q").addEventListener("search", () => {
+
+      activityPage = 1;
+
+      refreshActivity();
+
+    });
+
+    ["notif-from", "notif-to"].forEach((id) => {
+
+      $(id).addEventListener("change", () => {
+
+        notifPage = 1;
+
+        refreshNotificationsView();
+
+      });
+
+    });
+
+    $("notif-q").addEventListener("input", () => {
+
+      notifPage = 1;
+
+      refreshNotificationsView();
+
+    });
+
+
+
+    ensureSession().then(() => {
+
+    load();
+
+    startPolling(() => {
+
+      if (document.hidden) return;
+
+      refreshActivity();
+      refreshSidebarBusiness();
+
+      api("/notifications").then((items) => {
+
+        notifAll = items;
+
+        if (!$("notif-stack").hidden) refreshNotificationsView();
+
+      });
+
+    }, 8000);
+
+    });
+
+  </script>
+
+</body>
+
+</html>
+

@@ -1,0 +1,1024 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>직원 데스크 - AI 직원</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="/ui/admin.css?v=53">
+  <link rel="stylesheet" href="/ui/admin-desk-mobile.css?v=15">
+</head>
+<body class="dash-app dash-app--desk" data-desk-mtab="home">
+  <aside class="dash-sidebar">
+    <div class="dash-brand">
+      <div class="dash-brand-icon">AI</div>
+      <div>
+        <h1>AI 직원</h1>
+        <p>24시간 응대하는<br>우리 매장의 AI 비서</p>
+      </div>
+    </div>
+    <div class="dash-sidebar-user">
+      <span class="dash-sidebar-user-meta"><span class="dot"></span><span class="dash-sidebar-user-name" id="sidebar-business">OO업체</span></span>
+      <button type="button" class="dash-sidebar-logout" id="btn-logout">로그아웃</button>
+    </div>
+    <nav class="dash-nav">
+      <a href="/ui/admin.html" class="active"><span class="ico ico-home"></span> 직원 데스크</a>
+      <a href="/ui/conversations.html"><span class="ico ico-chat"></span> 고객 대화</a>
+      <a href="/ui/activity.html"><span class="ico ico-clock"></span> 전체 활동</a>
+      <a href="/ui/intake-memos.html"><span class="ico ico-list"></span> 접수 메모 <span class="dash-nav-badge" id="nav-intake-badge" hidden></span></a>
+      <a href="/ui/settings.html"><span class="ico ico-gear"></span> 운영 설정</a>
+      <a href="/ui/accounts.html"><span class="ico ico-doc"></span> 계정 관리</a>
+    </nav>
+  </aside>
+
+  <div class="dash-main">
+    <section class="mh m-mobile-only" id="mh" aria-label="홈">
+      <header class="mh-top">
+        <div class="mh-brand">
+          <span class="mh-logo" aria-hidden="true">AI</span>
+          <h1 class="mh-title" id="mh-title">OO업체 AI 직원</h1>
+        </div>
+        <button type="button" class="mh-bell" id="mh-bell" aria-label="시스템 알림">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="mh-bell-dot" id="mh-bell-dot" hidden></span>
+        </button>
+      </header>
+
+      <div class="mh-hero" id="mh-hero">
+        <img class="mh-hero-img" src="/ui/mh-robot.jpg?v=3" alt="" width="220" height="220">
+        <div class="mh-hero-copy">
+          <p class="mh-hero-status"><span class="dot" aria-hidden="true"></span><span id="mh-hero-status">AI가 응답 중</span></p>
+          <p class="mh-hero-desc" id="mh-hero-desc">고객 문의에 AI가<br>실시간으로 응대하고 있습니다.</p>
+        </div>
+      </div>
+
+      <div class="mh-kpis">
+        <div class="mh-kpi">
+          <span class="mh-kpi-ico mh-kpi-ico--blue" aria-hidden="true">💬</span>
+          <div class="mh-kpi-body">
+            <div class="mh-kpi-label">오늘 문의</div>
+            <div class="mh-kpi-value" id="mh-inbound">-<small>건</small></div>
+            <div class="mh-kpi-hint mh-kpi-hint--blue" id="mh-inbound-hint">-</div>
+          </div>
+        </div>
+        <div class="mh-kpi">
+          <span class="mh-kpi-ico mh-kpi-ico--purple" aria-hidden="true">🤖</span>
+          <div class="mh-kpi-body">
+            <div class="mh-kpi-label">AI 처리 완료</div>
+            <div class="mh-kpi-value" id="mh-ai">-<small>건</small></div>
+            <div class="mh-kpi-hint mh-kpi-hint--purple" id="mh-ai-hint">-</div>
+          </div>
+        </div>
+        <div class="mh-kpi">
+          <span class="mh-kpi-ico mh-kpi-ico--green" aria-hidden="true">📅</span>
+          <div class="mh-kpi-body">
+            <div class="mh-kpi-label">예약 일정</div>
+            <div class="mh-kpi-value" id="mh-appts">-<small>건</small></div>
+            <div class="mh-kpi-hint mh-kpi-hint--sky" id="mh-appts-hint">-</div>
+          </div>
+        </div>
+        <div class="mh-kpi" id="mh-kpi-status">
+          <span class="mh-kpi-ico mh-kpi-ico--ring" aria-hidden="true"><span class="mh-ring"></span></span>
+          <div class="mh-kpi-body">
+            <div class="mh-kpi-label" id="mh-status-label">정상 작동</div>
+            <div class="mh-kpi-value mh-kpi-value--ok" id="mh-status">운영 중</div>
+            <div class="mh-kpi-hint mh-kpi-hint--muted" id="mh-status-hint">모든 채널이 정상입니다.</div>
+          </div>
+        </div>
+      </div>
+
+      <a class="mh-intake" id="mh-intake" href="/ui/intake-memos.html" hidden>
+        <span class="mh-intake-ico" aria-hidden="true">📋</span>
+        <span class="mh-intake-text">접수 메모 <span id="mh-intake-count">0</span>건이 <em>미연락</em> 상태입니다.</span>
+        <span class="mh-intake-chev" aria-hidden="true">›</span>
+      </a>
+
+      <section class="mh-card">
+        <div class="mh-card-head">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5.5 5h13L21 13v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6l2.5-8Z"/></svg>최근 고객 인박스</h3>
+          <button type="button" class="mh-card-link" id="mh-inbox-all">전체보기 ›</button>
+        </div>
+        <div id="mh-inbox"></div>
+      </section>
+
+      <section class="mh-card">
+        <div class="mh-card-head">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 3v3M17 3v3M3.5 9.5h17"/><rect x="3.5" y="5" width="17" height="15.5" rx="2"/></svg>오늘 일정</h3>
+          <span class="mh-card-count" id="mh-sched-count">0건</span>
+        </div>
+        <div id="mh-sched"></div>
+      </section>
+    </section>
+
+    <div class="dash-header-block">
+    <section class="dash-hero">
+      <img class="dash-hero-media" src="/public/chasanhu_header.png?v=5" width="1584" height="269" alt="">
+      <div class="dash-hero-shade" aria-hidden="true"></div>
+      <div class="dash-hero-fade" aria-hidden="true"></div>
+      <div class="dash-hero-layer">
+        <div class="dash-hero-utils" id="top-pills">
+          <span class="dash-pill ok" id="pill-ai-ok">AI 정상 작동 중</span>
+          <button type="button" class="dash-hero-link" onclick="location.href='/ui/settings.html'">
+            <span class="ico-gear-sm" aria-hidden="true"></span> 사이트 설정
+          </button>
+          <div class="dash-hero-user" id="hero-user">
+            <span class="hero-avatar" id="hero-avatar">OO</span>
+            <span class="hero-user-name" id="hero-user-name">OO업체</span>
+            <span class="hero-chevron" aria-hidden="true">▾</span>
+          </div>
+        </div>
+        <div class="dash-hero-body">
+          <div class="dash-hero-brand">
+            <div class="dash-hero-mark" aria-hidden="true"><span class="ico-chat-sm"></span></div>
+            <div class="dash-hero-copy">
+              <div class="dash-hero-title-row">
+                <h2 id="hero-title">OO업체 AI 직원</h2>
+                <span class="dash-hero-status">
+                  <span class="live" id="hero-live"></span>
+                  <span id="hero-status-text">근무 중 · 문자 · 전화 응대</span>
+                </span>
+              </div>
+              <p class="desc" id="hero-desc">24시간 고객의 연락을 놓치지 않고, AI가 친절하게 응대하고 있습니다.</p>
+            </div>
+          </div>
+          <div class="dash-hero-card">
+            <div class="dash-hero-card-wave" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <div class="dash-hero-card-text">
+              <span>AI 직원이</span>
+              <strong>지금도 열심히 일하고 있어요!</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dash-stats" id="stats">
+      <div class="dash-stat dash-stat--inbound">
+        <div class="stat-ico-box blue" aria-hidden="true">💬</div>
+        <div class="stat-body">
+          <div class="label">오늘 문의</div>
+          <div class="value" id="s-inbound">-<span class="unit">건</span></div>
+          <div class="hint" id="s-inbound-hint">-</div>
+        </div>
+      </div>
+      <div class="dash-stat dash-stat--ai">
+        <div class="stat-ico-box purple" aria-hidden="true">🤖</div>
+        <div class="stat-body">
+          <div class="label">AI 처리 완료</div>
+          <div class="value" id="s-ai">-<span class="unit">건</span></div>
+          <div class="hint hint--ai" id="s-ai-hint">✔ 100% 자동 응대</div>
+        </div>
+      </div>
+      <div class="dash-stat dash-stat--quotes">
+        <div class="stat-ico-box orange" aria-hidden="true">📋</div>
+        <div class="stat-body">
+          <div class="label">견적 대기</div>
+          <div class="value" id="s-quotes">-<span class="unit">건</span></div>
+          <div class="hint" id="s-quotes-hint">대기 중인 견적이 없습니다.</div>
+        </div>
+      </div>
+      <div class="dash-stat dash-stat--calendar">
+        <div class="stat-ico-box green" aria-hidden="true">📅</div>
+        <div class="stat-body">
+          <div class="label">예정 일정</div>
+          <div class="value" id="s-appts">-</div>
+          <div class="hint" id="s-appts-hint">오늘 예정된 일정이 없습니다.</div>
+        </div>
+      </div>
+      <div class="dash-stat dash-stat--status">
+        <div class="stat-ico-box stat-ico-box--ring" id="s-ring-wrap" aria-hidden="true">
+          <svg viewBox="0 0 56 56" class="stat-ring-svg"><circle class="ring-bg" cx="28" cy="28" r="22"/><circle class="ring-fg" cx="28" cy="28" r="22"/></svg>
+          <span class="stat-ring-dot"></span>
+        </div>
+        <div class="stat-body">
+          <div class="label">AI 업무 상태</div>
+          <div class="value value--status" id="s-ring">정상 작동 중</div>
+          <div class="hint" id="s-ring-hint">모든 채널이 원활하게 응대 중입니다.</div>
+        </div>
+      </div>
+    </section>
+    <div class="dash-intake-alert" id="intake-alert" hidden role="status">
+      <span class="dash-intake-alert-ico" aria-hidden="true">📋</span>
+      <p>접수 메모 <strong id="intake-alert-count">0</strong>건이 <em>미연락</em> 상태입니다. 날짜와 관계없이 처리할 때까지 표시됩니다.</p>
+      <a href="/ui/intake-memos.html" class="dash-intake-alert-link">접수 메모에서 처리</a>
+    </div>
+    </div>
+
+    <header class="desk-mpane-head m-mobile-only" id="desk-head-customer">
+      <h1>고객 인박스</h1>
+      <div class="desk-mpane-tools">
+        <button type="button" id="desk-inbox-search-m" aria-label="검색">⌕</button>
+        <button type="button" id="desk-inbox-filter-m" aria-label="필터">▾</button>
+      </div>
+    </header>
+    <header class="desk-mpane-head m-mobile-only" id="desk-head-schedule">
+      <h1>일정</h1>
+    </header>
+    <header class="desk-mpane-head m-mobile-only" id="desk-head-activity">
+      <h1>활동 및 일정</h1>
+    </header>
+
+    <section class="desk-msettings m-mobile-only" id="desk-pane-settings" aria-label="설정">
+      <div class="desk-msection-head">
+        <h3>설정</h3>
+      </div>
+      <nav class="desk-msettings-list">
+        <a href="/ui/settings.html">운영 설정</a>
+        <a href="/ui/intake-memos.html">접수 메모</a>
+        <a href="/ui/accounts.html">계정 관리</a>
+        <a href="/ui/activity.html">전체 활동 (웹)</a>
+        <a href="/ui/conversations.html">고객 대화 (웹)</a>
+      </nav>
+      <button type="button" class="desk-mlink" id="desk-open-sidebar" style="margin-top:16px">전체 메뉴 (사이드바)</button>
+    </section>
+
+    <div class="dash-canvas">
+    <section class="dash-workspace" id="history">
+      <div class="dash-panel dash-panel--inbox">
+        <div class="dash-inbox-head">
+          <div class="dash-inbox-title">
+            <h3>고객 인박스</h3>
+            <span class="dash-inbox-badge" id="inbox-count" hidden>0</span>
+          </div>
+          <div class="dash-inbox-tools">
+            <input type="search" id="inbox-search" class="dash-inbox-search" placeholder="검색" aria-label="인박스 검색" hidden>
+            <button type="button" class="dash-inbox-icon-btn" id="inbox-search-toggle" aria-label="검색">
+              <span class="ico-search" aria-hidden="true"></span>
+            </button>
+            <select id="inbox-channel" class="dash-inbox-channel" aria-label="채널">
+              <option value="all">전체 채널</option>
+              <option value="phone">전화</option>
+              <option value="sms">문자</option>
+            </select>
+          </div>
+        </div>
+        <div class="dash-tabs dash-tabs--segment" id="inbox-tabs">
+          <button type="button" class="active" data-filter="all">전체</button>
+          <button type="button" data-filter="phone">전화</button>
+          <button type="button" data-filter="sms">문자</button>
+        </div>
+        <div class="dash-inbox-list" id="conv-list"></div>
+      </div>
+
+      <div class="dash-panel dash-panel--chat">
+        <div class="dash-chat-head">
+          <div class="dash-chat-head-row">
+            <button type="button" class="dash-chat-back" id="btn-chat-back" hidden aria-label="목록으로">‹</button>
+            <div class="dash-chat-customer">
+              <div class="dash-chat-avatar" id="conv-avatar" aria-hidden="true">—</div>
+              <div class="dash-chat-who">
+                <div class="title" id="conv-title">대화를 선택하세요</div>
+                <div class="meta" id="conv-meta">고객을 선택하면 상담 내용이 표시됩니다</div>
+                <div class="dash-chat-badges" id="conv-badges"></div>
+              </div>
+            </div>
+            <div class="dash-chat-head-meta" id="conv-head-meta" hidden>
+              <span class="dash-chat-channel-pill" id="conv-channel-pill"></span>
+              <time class="dash-chat-datetime" id="conv-datetime"></time>
+            </div>
+            <div class="dash-chat-actions">
+              <button type="button" class="dash-chat-info" id="btn-customer-info" disabled>고객 정보</button>
+              <button type="button" class="dash-chat-menu menu" disabled aria-label="메뉴">⋮</button>
+            </div>
+          </div>
+        </div>
+        <div class="thread dash-thread" id="thread"></div>
+        <div class="dash-chips" id="reply-chips">
+          <button type="button" class="dash-chip dash-chip--suggest suggest" data-chip="">✦ 답변 제안</button>
+          <button type="button" class="dash-chip" data-chip="정확한 견적을 위해 현장 사진과 주소를 문자로 보내주시면 검토 후 안내드리겠습니다.">견적 안내</button>
+          <button type="button" class="dash-chip" data-chip="방문 일정 조율을 위해 희망 날짜와 시간대를 알려주세요.">방문 일정 문의</button>
+          <button type="button" class="dash-chip" data-chip="가격은 현장 조건에 따라 달라질 수 있어, 확인 후 정확히 안내드리겠습니다.">가격 안내</button>
+          <button type="button" class="dash-chip" data-chip="문의해 주셔서 감사합니다. 추가로 궁금한 점이 있으면 편하게 말씀해 주세요.">감사 인사</button>
+        </div>
+        <div class="dash-compose">
+          <div class="dash-compose-field">
+            <textarea id="reply" placeholder="사장님이 직접 답장 (이 내용이 문자로 발송됩니다)" disabled></textarea>
+            <div class="dash-compose-inline-tools">
+              <button type="button" class="dash-compose-ico" title="첨부" disabled aria-label="첨부">
+                <span class="ico-attach" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="dash-compose-ico" title="이모지" disabled aria-label="이모지">
+                <span class="ico-emoji" aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
+          <button type="button" id="btn-reply" class="dash-compose-send" disabled>보내기 ▶</button>
+        </div>
+      </div>
+
+      <div class="dash-panel dash-panel--activity">
+        <div class="dash-activity-top">
+          <div class="dash-side-tabs" id="side-tabs">
+            <button type="button" class="active" data-pane="activity-pane">직원 활동</button>
+            <button type="button" data-pane="notif-pane">시스템 알림</button>
+          </div>
+          <select id="activity-range" class="dash-activity-range" aria-label="기간">
+            <option value="24">최근 24시간</option>
+            <option value="168">최근 7일</option>
+          </select>
+        </div>
+        <div id="activity-pane" class="dash-timeline-wrap">
+          <div class="dash-timeline dash-timeline--feed" id="activity-timeline"></div>
+          <button type="button" class="dash-view-all" id="activity-more">전체 활동 보기 →</button>
+        </div>
+        <div id="notif-pane" class="dash-timeline-wrap" hidden>
+          <div class="dash-timeline dash-timeline--feed" id="notifications"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dash-bottom">
+      <div class="dash-panel dash-panel--bottom dash-bottom-combo">
+        <h3 class="dash-bottom-combo-title">견적 · 일정 업무</h3>
+        <div class="dash-bottom-split">
+          <div class="dash-subcard" id="quotes">
+            <h4>견적 관리</h4>
+            <div class="dash-quote-tabs" id="quote-filter-tabs">
+              <button type="button" class="active" data-qf="all">전체</button>
+              <button type="button" data-qf="견적대기">진행 중</button>
+              <button type="button" data-qf="견적발송">발송</button>
+              <button type="button" data-qf="일정확정">확정</button>
+            </div>
+            <button id="btn-reminders" class="small" type="button">리마인드 발송</button>
+            <div class="dash-subcard-body" id="quotes-table"></div>
+          </div>
+          <div class="dash-subcard" id="calendar-card">
+            <h4>다가오는 일정 (14일)</h4>
+            <div class="dash-block-actions">
+              <button type="button">캘린더 보기</button>
+              <button type="button" id="btn-report">일일 리포트</button>
+            </div>
+            <div class="dash-subcard-body" id="calendar-list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    </div>
+
+    <nav class="desk-mtab m-mobile-only" id="desk-mtab" aria-label="하단 메뉴">
+      <button type="button" class="desk-mtab-btn is-active" data-mtab="home"><span class="desk-mtab-ico desk-mtab-ico--home" aria-hidden="true"></span>홈</button>
+      <button type="button" class="desk-mtab-btn" data-mtab="customer"><span class="desk-mtab-ico desk-mtab-ico--customer" aria-hidden="true"></span>고객</button>
+      <button type="button" class="desk-mtab-btn" data-mtab="schedule"><span class="desk-mtab-ico desk-mtab-ico--cal" aria-hidden="true"></span>일정</button>
+      <button type="button" class="desk-mtab-btn" data-mtab="activity"><span class="desk-mtab-ico desk-mtab-ico--activity" aria-hidden="true"></span>활동</button>
+      <button type="button" class="desk-mtab-btn" data-mtab="settings"><span class="desk-mtab-ico desk-mtab-ico--gear" aria-hidden="true"></span>설정</button>
+    </nav>
+  </div>
+
+  <script src="/ui/common.js"></script>
+  <script src="/ui/dash-shared.js?v=5"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let selected = null;
+    let paused = false;
+    let inboxFilter = "all";
+    let inboxSearch = "";
+    let allConversations = [];
+    let allQuotes = [];
+    let quoteFilter = "all";
+    const openQuoteDetails = new Set();
+    let calendarEvents = [];
+
+    const STATUS_BADGE = { "견적대기": "amber", "견적완료": "blue", "견적발송": "blue", "일정확정": "green" };
+
+    const deskMq = window.matchMedia("(max-width: 900px)");
+    const workspaceEl = () => document.getElementById("history");
+    let refreshDeskMobileChat = null;
+    let deskSetTab = () => {};
+
+    function initDeskMobile() {
+      const body = document.body;
+      if (!body.classList.contains("dash-app--desk")) return;
+
+      const scrollToEl = (el) => {
+        if (!el) return;
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      };
+
+      $("mh-inbox-all")?.addEventListener("click", () => scrollToEl(document.querySelector(".dash-panel--inbox")));
+      $("mh-bell")?.addEventListener("click", () => {
+        document.querySelector("#side-tabs button[data-pane='notif-pane']")?.click();
+        scrollToEl(document.querySelector(".dash-panel--activity"));
+      });
+      $("mh-sched")?.addEventListener("click", (e) => {
+        if (e.target.closest(".mh-sched-row")) scrollToEl($("calendar-card"));
+      });
+      $("desk-inbox-search-m")?.addEventListener("click", () => $("inbox-search-toggle")?.click());
+      $("desk-inbox-filter-m")?.addEventListener("click", () => $("inbox-channel")?.focus());
+      $("desk-open-sidebar")?.addEventListener("click", () => {
+        const sidebar = document.querySelector(".dash-sidebar");
+        let backdrop = document.querySelector(".dash-mobile-backdrop");
+        if (!backdrop && sidebar) {
+          backdrop = document.createElement("div");
+          backdrop.className = "dash-mobile-backdrop";
+          document.body.appendChild(backdrop);
+          backdrop.addEventListener("click", () => {
+            sidebar.classList.remove("is-open");
+            backdrop.hidden = true;
+            document.body.classList.remove("dash-nav-open");
+          });
+        }
+        sidebar?.classList.add("is-open");
+        if (backdrop) {
+          backdrop.hidden = false;
+          document.body.classList.add("dash-nav-open");
+        }
+      });
+      $("intake-alert")?.addEventListener("click", (e) => {
+        if (!deskMq.matches) return;
+        if (e.target.closest("a")) return;
+        location.href = "/ui/intake-memos.html";
+      });
+
+      const applyMq = () => {
+        const reply = $("reply");
+        if (reply) {
+          reply.dataset.phDesktop = reply.dataset.phDesktop || reply.getAttribute("placeholder") || "";
+          reply.placeholder = deskMq.matches
+            ? "입력한 내용이 문자로 발송됩니다"
+            : reply.dataset.phDesktop;
+        }
+        const headMeta = $("conv-head-meta");
+        const who = document.querySelector(".dash-chat-who");
+        const row = document.querySelector(".dash-chat-head-row");
+        const actions = document.querySelector(".dash-chat-actions");
+        if (headMeta && who && row) {
+          if (deskMq.matches) {
+            if (headMeta.parentElement !== who) {
+              const phoneMeta = $("conv-meta");
+              if (phoneMeta) phoneMeta.after(headMeta);
+              else who.appendChild(headMeta);
+            }
+          } else if (actions && headMeta.parentElement !== row) {
+            row.insertBefore(headMeta, actions);
+          }
+        }
+        if (deskMq.matches) body.setAttribute("data-desk-mtab", "all");
+        else body.removeAttribute("data-desk-mtab");
+      };
+      deskMq.addEventListener("change", applyMq);
+      applyMq();
+
+      const ws = workspaceEl();
+      if (ws) {
+        ws.classList.remove("is-chat-open");
+        ws._mobileChatClear = () => {
+          selected = null;
+          $("reply").disabled = true;
+          $("btn-reply").disabled = true;
+          $("btn-customer-info").disabled = true;
+          document.querySelector(".dash-panel--chat .menu").disabled = true;
+          renderInboxList();
+        };
+      }
+
+      function mountDeskTopBar() {
+        const bar = document.getElementById("dash-mobile-bar");
+        const top = document.querySelector(".mh-top");
+        if (!bar) return;
+        const title = document.getElementById("dash-mobile-page-title");
+        if (title) {
+          title.hidden = true;
+          title.textContent = "";
+        }
+        if (top && !bar.querySelector(".mh-brand")) {
+          const brand = top.querySelector(".mh-brand");
+          const bell = document.getElementById("mh-bell");
+          if (brand) bar.appendChild(brand);
+          if (bell) bar.appendChild(bell);
+          top.remove();
+        }
+      }
+      mountDeskTopBar();
+      document.addEventListener("DOMContentLoaded", () => setTimeout(mountDeskTopBar, 0));
+    }
+
+    function renderMhStatus(status, intakePending) {
+      if (!$("mh")) return;
+      const bn = status.business_name || "OO업체";
+      $("mh-title").textContent = `${bn} AI 직원`;
+      $("mh-hero").classList.toggle("is-paused", !!status.paused);
+      $("mh-hero-status").textContent = status.paused ? "AI 휴식 중" : "AI가 응답 중";
+      $("mh-hero-desc").innerHTML = status.paused
+        ? "AI 자동 응대가<br>일시 중지되었습니다."
+        : "고객 문의에 AI가<br>실시간으로 응대하고 있습니다.";
+
+      const inb = status.stats.inbound.messages;
+      const ai = status.stats.ai.messages;
+      const delta = status.stats.inbound_vs_yesterday ?? 0;
+      $("mh-inbound").innerHTML = `${inb}<small>건</small>`;
+      $("mh-inbound-hint").textContent = delta > 0
+        ? `어제보다 +${delta} ↗`
+        : delta < 0
+          ? `어제보다 ${delta} ↘`
+          : (inb ? `고객 ${status.stats.inbound.customers}명` : "오늘 문의 없음");
+      $("mh-ai").innerHTML = `${ai}<small>건</small>`;
+      const pct = inb ? Math.round((ai / Math.max(inb, 1)) * 100) : 100;
+      $("mh-ai-hint").textContent = `✓ ${pct}% 자동 응대`;
+
+      $("mh-kpi-status").classList.toggle("is-paused", !!status.paused);
+      $("mh-status-label").textContent = status.paused ? "AI 상태" : "정상 작동";
+      $("mh-status").textContent = status.paused ? "휴식 중" : "운영 중";
+      $("mh-status-hint").textContent = status.paused ? "자동 응대가 중지되었습니다." : "모든 채널이 정상입니다.";
+
+      $("mh-intake").hidden = intakePending <= 0;
+      $("mh-intake-count").textContent = String(intakePending);
+    }
+
+    function renderMhInbox() {
+      const box = $("mh-inbox");
+      if (!box) return;
+      const rows = allConversations.slice(0, 3);
+      box.innerHTML = rows.length
+        ? rows.map((r) => `
+          <button type="button" class="mh-inbox-row" data-phone="${esc(r.phone)}">
+            <span class="mh-av">${esc(inboxInitial(r))}</span>
+            <span class="mh-inbox-body">
+              <span class="mh-inbox-line1">
+                <span class="mh-inbox-name">${esc(inboxDisplayName(r))}</span>
+                <span class="mh-inbox-time">${fmtInboxTime(r.last_at)}</span>
+                ${inboxNeedsAttention(r) ? '<span class="mh-unread" aria-label="미확인"></span>' : ""}
+              </span>
+              <span class="mh-inbox-preview">${esc(inboxPreviewPrefix(r.last_source))} ${esc(r.last_content || "")}</span>
+            </span>
+          </button>`).join("")
+        : `<div class="mh-empty">대화가 없습니다</div>`;
+    }
+
+    function renderMhSchedule(events) {
+      const box = $("mh-sched");
+      if (!box) return;
+      const now = new Date();
+      const today = events.filter((ev) => {
+        const d = new Date(ev.start);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+      });
+      const pad = (n) => String(n).padStart(2, "0");
+      $("mh-sched-count").textContent = `${today.length}건`;
+      $("mh-appts").innerHTML = `${today.length}<small>건</small>`;
+      $("mh-appts-hint").textContent = today.length ? `오늘 예정 ${today.length}건` : "오늘 예정 없음";
+      box.innerHTML = today.length
+        ? today.slice(0, 3).map((e) => {
+          const d = new Date(e.start);
+          return `
+            <div class="mh-sched-row" role="button" tabindex="0">
+              <span class="mh-sched-time">${pad(d.getHours())}:${pad(d.getMinutes())}</span>
+              <span class="mh-sched-text">${esc(e.summary || (e.phone ? fmtPhone(e.phone) : "일정"))}</span>
+              <span class="mh-sched-chev" aria-hidden="true">›</span>
+            </div>`;
+        }).join("")
+        : `<div class="mh-empty">오늘 예정된 일정이 없습니다.</div>`;
+    }
+
+    $("mh-inbox")?.addEventListener("click", (e) => {
+      const row = e.target.closest("[data-phone]");
+      if (!row) return;
+      selected = row.dataset.phone;
+      $("reply").disabled = $("btn-reply").disabled = false;
+      $("btn-customer-info").disabled = false;
+      document.querySelector(".dash-panel--chat .menu").disabled = false;
+      document.querySelector(".dash-panel--chat")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      renderInboxList();
+      refreshThread(true);
+    });
+
+    function channelTag(row) {
+      if (row.last_source === "template") return "전화 문의";
+      return "문자 상담";
+    }
+    function inboxDisplayName(row) {
+      const base = row.name || fmtPhone(row.phone);
+      return /고객/.test(base) ? base : `${base} 고객님`;
+    }
+    function inboxPreviewPrefix(source) {
+      const map = { template: "자동문자", assistant: "AI", customer: "고객", owner: "사장님" };
+      return `${map[source] || "문자"}:`;
+    }
+    function inboxNeedsAttention(row) {
+      return row.last_source === "customer";
+    }
+    function fmtChatHeaderTime(iso) {
+      const d = new Date(iso);
+      const wd = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
+      const md = `${d.getMonth() + 1}. ${d.getDate()}.`;
+      const tm = d.toLocaleString("ko-KR", { hour: "numeric", minute: "2-digit", hour12: true });
+      return `${md} (${wd}) ${tm}`;
+    }
+    function channelPillLabel(source) {
+      return source === "template" ? "전화 문의" : "문자 상담";
+    }
+    function msgAvatar(source, customerInitial) {
+      if (source === "customer") return customerInitial;
+      if (source === "owner") return "사";
+      return "AI";
+    }
+    function renderDashThread(container, messages, customerInitial) {
+      const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 48;
+      if (!messages.length) {
+        container.innerHTML = `<div class="dash-empty">아직 대화가 없습니다</div>`;
+        return;
+      }
+      container.innerHTML = messages.map((m) => {
+        const isCustomer = m.source === "customer";
+        const side = isCustomer ? "left" : "right";
+        const av = msgAvatar(m.source, customerInitial);
+        const avClass = isCustomer ? "customer" : (m.source === "owner" ? "owner" : "ai");
+        return `
+          <div class="dash-msg dash-msg--${side} source-${esc(m.source)}">
+            <div class="dash-msg-avatar dash-msg-avatar--${avClass}">${esc(av)}</div>
+            <div class="dash-msg-body">
+              <div class="dash-msg-bubble">${esc(m.content)}</div>
+              <time class="dash-msg-time" datetime="${esc(m.created_at)}">${fmtChatMessageTime(m.created_at)}</time>
+            </div>
+          </div>`;
+      }).join("");
+      if (atBottom) container.scrollTop = container.scrollHeight;
+    }
+    function matchFilter(row) {
+      const ch = $("inbox-channel")?.value || "all";
+      const effective = ch !== "all" ? ch : inboxFilter;
+      if (effective === "all") return true;
+      if (effective === "phone") return row.last_source === "template";
+      return row.last_source !== "template";
+    }
+    function matchSearch(row) {
+      if (!inboxSearch) return true;
+      const q = inboxSearch.toLowerCase();
+      const name = (row.name || "").toLowerCase();
+      const phone = row.phone || "";
+      const prev = (row.last_content || "").toLowerCase();
+      return name.includes(q) || phone.includes(q) || prev.includes(q);
+    }
+
+    function setHeroPills(status) {
+      const ok = $("pill-ai-ok");
+      if (status.mock_mode || status.dry_run || status.paused) {
+        ok.className = "dash-pill warn";
+        ok.textContent = status.paused ? "AI 일시 정지" : (status.dry_run ? "DRY RUN" : "MOCK");
+      } else {
+        ok.className = "dash-pill ok";
+        ok.textContent = "AI 정상 작동 중";
+      }
+    }
+
+    async function refreshStatus() {
+      const status = await api("/status");
+      paused = status.paused;
+      setHeroPills(status);
+      const bn = status.business_name || "OO업체";
+      $("sidebar-business").textContent = bn;
+      $("hero-user-name").textContent = bn;
+      $("hero-avatar").textContent = bn.length >= 2 ? bn.slice(0, 2) : (bn || "OO");
+      $("hero-title").textContent = `${bn} AI 직원`;
+      $("hero-status-text").textContent = paused ? "휴식 중" : "근무 중 · 문자 · 전화 응대";
+      $("hero-live").style.background = paused ? "#f87171" : "#4ade80";
+      $("s-ring").textContent = paused ? "휴식 중" : "정상 작동 중";
+      $("s-ring-hint").textContent = paused
+        ? "AI 자동 응대가 일시 중지되었습니다."
+        : "모든 채널이 원활하게 응대 중입니다.";
+      const ring = document.querySelector(".ring-fg");
+      const ringDot = document.querySelector(".stat-ring-dot");
+      if (ring) ring.style.stroke = paused ? "#f87171" : "#22c55e";
+      if (ringDot) ringDot.style.background = paused ? "#f87171" : "#22c55e";
+      const statusVal = $("s-ring");
+      if (statusVal) statusVal.style.color = paused ? "#dc2626" : "#16a34a";
+
+      const inb = status.stats.inbound.messages;
+      const ai = status.stats.ai.messages;
+      const delta = status.stats.inbound_vs_yesterday ?? 0;
+      $("s-inbound").innerHTML = `${inb}<span class="unit">건</span>`;
+      const inHint = $("s-inbound-hint");
+      inHint.className = "hint";
+      if (delta > 0) {
+        inHint.className = "hint hint--compare";
+        inHint.textContent = `어제보다 +${delta} ↗`;
+      } else if (delta < 0) {
+        inHint.className = "hint hint--compare down";
+        inHint.textContent = `어제보다 ${delta} ↘`;
+      } else {
+        inHint.textContent = inb ? `고객 ${status.stats.inbound.customers}명` : "오늘 문의 없음";
+      }
+      $("s-ai").innerHTML = `${ai}<span class="unit">건</span>`;
+      const pct = inb ? Math.round((ai / Math.max(inb, 1)) * 100) : 100;
+      $("s-ai-hint").textContent = `✔ ${pct}% 자동 응대`;
+      const intakePending = applyIntakeNavBadge(status);
+      const intakeAlert = $("intake-alert");
+      const intakeCountEl = $("intake-alert-count");
+      if (intakeAlert) intakeAlert.hidden = intakePending <= 0;
+      if (intakeCountEl) intakeCountEl.textContent = String(intakePending);
+      renderMhStatus(status, intakePending);
+      return status;
+    }
+
+    async function togglePause() {
+      await api(paused ? "/resume" : "/pause", { method: "POST" });
+      refreshStatus();
+    }
+    $("btn-toggle")?.addEventListener("click", () => togglePause());
+
+    document.querySelectorAll("#inbox-tabs button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#inbox-tabs button").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        inboxFilter = btn.dataset.filter;
+        $("inbox-channel").value = inboxFilter === "all" ? "all" : inboxFilter;
+        renderInboxList();
+      });
+    });
+    $("inbox-channel").addEventListener("change", () => {
+      inboxFilter = $("inbox-channel").value;
+      document.querySelectorAll("#inbox-tabs button").forEach((b) => {
+        b.classList.toggle("active", b.dataset.filter === inboxFilter);
+      });
+      renderInboxList();
+    });
+    $("inbox-search").addEventListener("input", (e) => {
+      inboxSearch = e.target.value.trim();
+      renderInboxList();
+    });
+    $("inbox-search-toggle").addEventListener("click", () => {
+      const inp = $("inbox-search");
+      inp.hidden = !inp.hidden;
+      if (!inp.hidden) inp.focus();
+      else { inp.value = ""; inboxSearch = ""; renderInboxList(); }
+    });
+
+    function tabCounts() {
+      const phone = allConversations.filter((r) => r.last_source === "template").length;
+      const sms = allConversations.length - phone;
+      document.querySelector("#inbox-tabs button[data-filter='all']").textContent = `전체 (${allConversations.length})`;
+      document.querySelector("#inbox-tabs button[data-filter='phone']").textContent = `전화 (${phone})`;
+      document.querySelector("#inbox-tabs button[data-filter='sms']").textContent = `문자 (${sms})`;
+      const badge = $("inbox-count");
+      badge.textContent = String(allConversations.length);
+      badge.hidden = allConversations.length === 0;
+    }
+
+    function inboxInitial(row) {
+      const label = (row.name || fmtPhone(row.phone) || "?").trim();
+      const ch = label.replace(/[^\dA-Za-z가-힣]/g, "").charAt(0);
+      return ch ? ch.toUpperCase() : "고";
+    }
+
+    function renderInboxList() {
+      const rows = allConversations.filter(matchFilter).filter(matchSearch);
+      $("conv-list").innerHTML = rows.length ? rows.map((r) => `
+        <div class="dash-inbox-item ${r.phone === selected ? "active" : ""}" data-phone="${esc(r.phone)}">
+          <div class="avatar">${esc(inboxInitial(r))}</div>
+          <div class="dash-inbox-item-body">
+            <div class="row1">
+              <span class="name">${esc(inboxDisplayName(r))}</span>
+              <span class="row1-end">
+                <span class="time">${fmtInboxTime(r.last_at)}</span>
+                ${inboxNeedsAttention(r) ? '<span class="unread" aria-label="미확인"></span>' : ""}
+              </span>
+            </div>
+            <div class="preview"><span class="preview-prefix">${esc(inboxPreviewPrefix(r.last_source))}</span> ${esc(r.last_content)}</div>
+          </div>
+        </div>`).join("") : `<div class="dash-empty"><div class="icon">📭</div>대화가 없습니다</div>`;
+    }
+
+    async function refreshConversations() {
+      allConversations = await api("/conversations");
+      tabCounts();
+      renderInboxList();
+      renderMhInbox();
+    }
+
+    $("conv-list").addEventListener("click", (e) => {
+      const item = e.target.closest(".dash-inbox-item");
+      if (!item) return;
+      selected = item.dataset.phone;
+      $("reply").disabled = $("btn-reply").disabled = false;
+      $("btn-customer-info").disabled = false;
+      document.querySelector(".dash-panel--chat .menu").disabled = false;
+      renderInboxList();
+      refreshThread(true);
+      refreshDeskMobileChat?.();
+    });
+
+    async function refreshThread(scrollToBottom = false) {
+      if (!selected) {
+        $("thread").innerHTML = `<div class="dash-empty">왼쪽에서 고객을 선택하세요</div>`;
+        $("conv-title").textContent = "대화를 선택하세요";
+        $("conv-meta").textContent = "고객을 선택하면 상담 내용이 표시됩니다";
+        $("conv-avatar").textContent = "—";
+        $("conv-head-meta").hidden = true;
+        $("conv-badges").innerHTML = "";
+        return;
+      }
+      const data = await api(`/conversations/${selected}`);
+      const name = data.customer?.["이름"] || "";
+      const who = name || fmtPhone(selected);
+      const display = /고객/.test(who) ? who : `${who} 고객님`;
+      $("conv-title").textContent = display;
+      $("conv-meta").textContent = fmtPhone(selected);
+      $("conv-avatar").textContent = inboxInitial({ name, phone: selected });
+      const last = data.messages.at(-1);
+      const hasPhone = data.messages.some((m) => m.source === "template");
+      const pill = $("conv-channel-pill");
+      pill.textContent = channelPillLabel(hasPhone ? "template" : "customer");
+      pill.dataset.kind = hasPhone ? "phone" : "sms";
+      $("conv-datetime").textContent = last ? fmtChatHeaderTime(last.created_at) : "";
+      $("conv-head-meta").hidden = false;
+      $("conv-badges").innerHTML = [
+        ...data.quotes.map((q) => `<span class="badge ${STATUS_BADGE[q["상태"]] || ""}">${esc(q["견적ID"])} ${esc(q["상태"])}</span>`),
+        ...data.appointments.map((a) => `<span class="badge green">${esc(a["유형"])} ${esc(a["시작"].slice(5))}</span>`),
+      ].join(" ");
+      renderDashThread($("thread"), data.messages, inboxInitial({ name, phone: selected }));
+      if (scrollToBottom) $("thread").scrollTop = $("thread").scrollHeight;
+    }
+
+    $("btn-customer-info").addEventListener("click", async () => {
+      if (!selected) return;
+      const data = await api(`/conversations/${selected}`);
+      const c = data.customer;
+      alert(c ? `이름: ${c["이름"] || "-"}\n메모: ${c["메모"] || "-"}` : "등록된 고객 정보가 없습니다.");
+    });
+
+    document.querySelectorAll("#reply-chips button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if ($("reply").disabled) return;
+        if (btn.classList.contains("suggest")) {
+          const last = $("thread").querySelector(".dash-msg--left .dash-msg-bubble");
+          if (last) $("reply").value = `문의 주신 "${last.textContent.slice(0, 40)}…" 에 대해 안내드리겠습니다. `;
+          else $("reply").value = "안녕하세요. 문의 감사합니다. ";
+        } else {
+          $("reply").value = btn.dataset.chip;
+        }
+        $("reply").focus();
+      });
+    });
+
+    $("btn-reply").addEventListener("click", async () => {
+      const text = $("reply").value.trim();
+      if (!text || !selected) return;
+      await api(`/conversations/${selected}/reply`, { method: "POST", body: { text } });
+      $("reply").value = "";
+      refreshThread(true);
+      refreshConversations();
+      refreshActivity();
+    });
+
+    document.querySelectorAll("#quote-filter-tabs button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#quote-filter-tabs button").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        quoteFilter = btn.dataset.qf;
+        renderQuotesTable();
+      });
+    });
+
+    function renderQuotesTable() {
+      const rows = quoteFilter === "all" ? allQuotes : allQuotes.filter((q) => q["상태"] === quoteFilter);
+      $("quotes-table").innerHTML = rows.length ? `
+        <table class="dash-table">
+          <tr><th>견적</th><th>고객</th><th>내용</th><th>상태</th></tr>
+          ${rows.map((q) => {
+            const opened = openQuoteDetails.has(q["견적ID"]);
+            return `
+            <tr>
+              <td class="dash-quote-id"><b>${esc(q["견적ID"])}</b><div class="muted small">${esc(deskMq.matches ? String(q["요청일"] || "").replace(/^\d{4}-/, "") : (q["요청일"] || ""))}</div></td>
+              <td class="dash-quote-cust">${esc(q["이름"] || "-")}<div class="muted small">${esc(fmtPhone(q["전화번호"]))}</div></td>
+              <td class="dash-quote-body${opened ? " is-open" : ""}">
+                <div class="dash-quote-body-head">
+                  <b>${esc(q["서비스"])}</b>
+                  <button type="button" class="dash-quote-more m-mobile-only" data-quote-more="${esc(q["견적ID"])}">${opened ? "접기" : "상세"}</button>
+                </div>
+                <div class="dash-quote-extra">
+                  <div class="small">${esc(q["상세내용"])}</div>
+                  ${q["상태"] === "견적대기" ? `
+                    <div class="dash-quote-form">
+                      <input placeholder="금액" data-amount="${esc(q["견적ID"])}">
+                      <input placeholder="견적 내용" data-content="${esc(q["견적ID"])}">
+                      <button class="send" style="padding:6px 12px;font-size:12px;" data-ready="${esc(q["견적ID"])}">견적 발송</button>
+                    </div>` : `<div class="small">${esc(q["견적금액"])} · ${esc(q["견적내용"])}</div>`}
+                </div>
+              </td>
+              <td class="dash-quote-status"><span class="badge ${STATUS_BADGE[q["상태"]] || ""}">${esc(q["상태"])}</span></td>
+            </tr>`;
+          }).join("")}
+        </table>` : `<div class="dash-empty-illus">진행 중인 견적이 없습니다</div>`;
+      document.querySelector("#quote-filter-tabs button[data-qf='all']").textContent =
+        `전체 ${allQuotes.length ? `(${allQuotes.length})` : "(0)"}`;
+    }
+
+    function isEditingQuoteForm() {
+      const el = document.activeElement;
+      return el && el.tagName === "INPUT" && el.closest(".dash-quote-form");
+    }
+
+    async function refreshQuotes(skipTable = false) {
+      allQuotes = await api("/quotes");
+      const pending = allQuotes.filter((q) => q["상태"] === "견적대기").length;
+      $("s-quotes").innerHTML = `${pending}<span class="unit">건</span>`;
+      $("s-quotes-hint").textContent = pending
+        ? "사장님 확인이 필요합니다."
+        : "대기 중인 견적이 없습니다.";
+      if (!skipTable) renderQuotesTable();
+    }
+
+    $("quotes-table").addEventListener("click", async (e) => {
+      const more = e.target.closest("[data-quote-more]");
+      if (more) {
+        const body = more.closest(".dash-quote-body");
+        if (!body) return;
+        const open = body.classList.toggle("is-open");
+        more.textContent = open ? "접기" : "상세";
+        if (open) openQuoteDetails.add(more.dataset.quoteMore);
+        else openQuoteDetails.delete(more.dataset.quoteMore);
+        return;
+      }
+      const id = e.target.dataset.ready;
+      if (!id) return;
+      const amount = document.querySelector(`[data-amount="${id}"]`).value.trim();
+      const content = document.querySelector(`[data-content="${id}"]`).value.trim();
+      if (!amount) return alert("금액을 입력하세요");
+      e.target.disabled = true;
+      try {
+        await api(`/quotes/${id}/ready`, { method: "POST", body: { amount, content } });
+      } finally {
+        refreshAll();
+      }
+    });
+
+    async function refreshCalendar() {
+      const events = await api("/calendar");
+      calendarEvents = events;
+      const withPhone = events.filter((e) => e.phone);
+      $("s-appts").textContent = withPhone.length ? withPhone.length : "-";
+      $("s-appts-hint").textContent = withPhone.length
+        ? `오늘 예정 ${withPhone.length}건`
+        : "오늘 예정된 일정이 없습니다.";
+      $("calendar-list").innerHTML = events.length ? `
+        <table class="dash-table">
+          <tr><th>일시</th><th>내용</th><th>고객</th></tr>
+          ${events.map((e) => `
+            <tr>
+              <td class="dash-cal-when">${esc(e.start.slice(5, 16))}</td>
+              <td class="dash-cal-what">${esc(e.summary)}</td>
+              <td class="dash-cal-who">${e.phone ? esc(fmtPhone(e.phone)) : "-"}</td>
+            </tr>`).join("")}
+        </table>` : `<div class="dash-empty-illus">예정된 일정이 없습니다</div>`;
+      renderMhSchedule(events);
+    }
+
+    document.querySelectorAll("#side-tabs button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#side-tabs button").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        const pane = btn.dataset.pane;
+        $("activity-pane").hidden = pane !== "activity-pane";
+        $("notif-pane").hidden = pane !== "notif-pane";
+        $("activity-range").hidden = pane !== "activity-pane";
+      });
+    });
+
+    $("btn-reminders").addEventListener("click", () => api("/jobs/reminders", { method: "POST" }).then(refreshAll));
+    $("btn-report").addEventListener("click", () => api("/jobs/report", { method: "POST" }).then(refreshNotifications));
+    $("activity-more").addEventListener("click", () => {
+      location.href = "/ui/activity.html";
+    });
+
+    async function refreshNotifications() {
+      const items = await api("/notifications");
+      renderNotificationsFeed($("notifications"), items);
+      const dot = $("mh-bell-dot");
+      if (dot) dot.hidden = !items.length;
+    }
+
+    async function refreshActivity() {
+      const limit = $("activity-range").value === "168" ? 60 : 35;
+      const res = await api(`/activity?limit=${limit}`);
+      const rows = Array.isArray(res) ? res : (res.items || []);
+      renderActivityFeed($("activity-timeline"), rows, "활동 내역이 없습니다", allConversations);
+    }
+    $("activity-range").addEventListener("change", refreshActivity);
+
+    function refreshAll(opts = {}) {
+      const skipQuotesTable = opts.skipQuotesTable || isEditingQuoteForm();
+      return Promise.all([
+        refreshStatus(), refreshConversations(), refreshThread(), refreshQuotes(skipQuotesTable),
+        refreshCalendar(), refreshNotifications(), refreshActivity(),
+      ]);
+    }
+
+    initDeskMobile();
+
+    ensureSession().then(() => {
+    refreshAll();
+    startPolling(() => {
+      const skipQuotesTable = document.activeElement?.id === "reply" || isEditingQuoteForm();
+      if (skipQuotesTable) {
+        return Promise.all([
+          refreshStatus(), refreshConversations(), refreshThread(), refreshQuotes(true),
+          refreshNotifications(), refreshActivity(),
+        ]);
+      }
+      refreshAll();
+    }, 5000);
+    });
+  </script>
+</body>
+</html>

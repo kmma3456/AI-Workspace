@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>테스트 채팅 - AI 직원</title>
+  <link rel="stylesheet" href="/ui/style.css">
+</head>
+<body>
+  <header class="topbar" id="topbar"></header>
+  <main>
+    <div class="test-layout">
+      <div>
+        <div class="card" style="margin-bottom: 12px;">
+          <div class="row" style="margin-bottom: 10px;">
+            <label class="muted small" style="white-space: nowrap;">고객 번호</label>
+            <input id="phone" class="grow" value="010-1234-5678">
+          </div>
+          <div class="quick" id="quick"></div>
+          <div class="row" style="flex-wrap: wrap;">
+            <button id="btn-missed" title="벨이 울렸는데 못 받은 경우 (MacroDroid 감지)">부재중 전화</button>
+            <button id="btn-notice" title="통화 중/전원 꺼짐일 때 통신사가 보내는 알림 문자">통신사 알림 문자</button>
+            <button id="btn-reset" class="danger">대화 초기화</button>
+            <label class="toggle small muted"><input type="checkbox" id="apply-filters" style="width:auto"> 실제 필터 적용</label>
+          </div>
+        </div>
+
+        <div class="phone">
+          <div class="phone-inner">
+            <div class="phone-head">
+              <div class="title" id="phone-title">업체</div>
+              <div class="muted small">고객 휴대폰 화면</div>
+            </div>
+            <div class="thread" id="thread"></div>
+            <div class="phone-input">
+              <textarea id="input" placeholder="고객 입장에서 문자 입력 (Enter 전송, Shift+Enter 줄바꿈)"></textarea>
+              <button class="primary" id="btn-send">전송</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <h2>이번 응답의 AI 판단 <span class="spacer"></span><span id="turn-badges"></span></h2>
+          <div id="turn" class="empty">메시지를 보내면 AI가 어떤 도구를 왜 호출했는지 여기에 표시됩니다.</div>
+        </div>
+
+        <div class="card">
+          <h2>이 고객의 견적 / 일정</h2>
+          <div id="customer-state" class="empty">-</div>
+        </div>
+
+        <div class="card">
+          <h2>사장님에게 간 알림 <span class="spacer"></span><span class="muted small">텔레그램으로 가는 내용</span></h2>
+          <div id="notifications" class="notif-list" style="max-height: 320px;"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/ui/common.js"></script>
+  <script>
+    const QUICK = [
+      "안녕하세요 견적 문의드립니다",
+      "영업시간이 어떻게 되나요?",
+      "방문견적 비용 있나요?",
+      "조금만 깎아주시면 안될까요?",
+      "사장님이랑 직접 통화하고 싶어요",
+      "일정 변경하고 싶어요",
+      "네 감사합니다",
+    ];
+
+    const $ = (id) => document.getElementById(id);
+    const phone = () => $("phone").value.replace(/\D/g, "");
+    let busy = false;
+
+    $("quick").innerHTML = QUICK.map((q) => `<button data-q="${esc(q)}">${esc(q)}</button>`).join("");
+    $("quick").addEventListener("click", (e) => {
+      if (e.target.dataset.q) { $("input").value = e.target.dataset.q; send(); }
+    });
+
+    $("input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); }
+    });
+    $("btn-send").addEventListener("click", send);
+
+    $("btn-missed").addEventListener("click", async () => {
+      const res = await api("/simulate/missed-call", { method: "POST", body: { phoneNumber: phone() } });
+      if (!res.sent) alert("자동 문자가 발송되지 않았습니다 (필터/10분 내 중복/정지 상태).");
+      refresh();
+    });
+
+    $("btn-notice").addEventListener("click", async () => {
+      const now = new Date();
+      const stamp = `${now.getMonth() + 1}/${now.getDate()} ${now.toTimeString().slice(0, 5)}`;
+      const message = window.prompt(
+        "휴대폰에 도착한 통신사 알림 문자 내용 (실제 문구로 바꿔서 시험해 보세요)",
+        `[콜키퍼] ${fmtPhone(phone())}님이 ${stamp}에 전화하셨습니다.`,
+      );
+      if (!message) return;
+      const res = await api("/simulate/carrier-notice", { method: "POST", body: { sender: "15440000", message } });
+      if (!res.recognized) alert("알림 문자로 인식하지 못했습니다. 문구를 알려주시면 인식 규칙에 추가하겠습니다.");
+      else if (!res.mobile.length) alert(`유선 번호(${res.other.join(", ")})라 문자 응대 대신 사장님에게 알렸습니다.`);
+      refresh();
+    });
+
+    $("btn-reset").addEventListener("click", async () => {
+      if (!confirm("이 번호의 대화 기록을 지울까요? (시트 기록은 남습니다)")) return;
+      await api(`/conversations/${phone()}`, { method: "DELETE" });
+      $("turn").innerHTML = `<div class="empty">대화를 초기화했습니다.</div>`;
+      $("turn-badges").innerHTML = "";
+      refresh();
+    });
+
+    async function send() {
+      const text = $("input").value.trim();
+      if (!text || busy) return;
+      busy = true;
+      $("btn-send").disabled = true;
+      $("input").value = "";
+
+      const thread = $("thread");
+      thread.insertAdjacentHTML("beforeend", `
+        <div class="bubble-wrap right customer"><div class="bubble">${esc(text)}</div></div>
+        <div class="bubble-wrap left" id="typing"><div class="bubble typing">AI가 답장 작성 중...</div></div>`);
+      thread.scrollTop = thread.scrollHeight;
+
+      try {
+        const outcome = await api("/simulate", {
+          method: "POST",
+          body: { phoneNumber: phone(), message: text, applyFilters: $("apply-filters").checked },
+        });
+        renderTurn(outcome);
+      } catch (err) {
+        $("turn").innerHTML = `<div class="trace-item error">${esc(err.message)}</div>`;
+      } finally {
+        busy = false;
+        $("btn-send").disabled = false;
+        refresh();
+      }
+    }
+
+    function renderTurn(o) {
+      if (o.filtered) {
+        $("turn-badges").innerHTML = `<span class="badge red">필터로 응답 안 함</span>`;
+        $("turn").innerHTML = `<div class="kv"><div class="k">사유</div><div>${esc(o.filtered)}</div></div>`;
+        return;
+      }
+      const badges = [];
+      if (o.category) badges.push(`<span class="badge blue">${esc(o.category)}</span>`);
+      if (o.escalated) badges.push(`<span class="badge amber">사장님 확인 필요</span>`);
+      if (o.blocked_reason) badges.push(`<span class="badge red">답장 차단</span>`);
+      if (!o.reply) badges.push(`<span class="badge">답장 안 함</span>`);
+      $("turn-badges").innerHTML = badges.join(" ");
+
+      const parts = [`
+        <div class="kv" style="margin-bottom: 12px;">
+          <div class="k">요약</div><div>${esc(o.summary || "-")}</div>
+          ${o.blocked_reason ? `
+            <div class="k">차단 사유</div><div style="color: var(--red)">${esc(o.blocked_reason)}</div>
+            <div class="k">원래 답장</div><div class="muted">${esc(o.original_reply)}</div>` : ""}
+          ${o.error ? `<div class="k">오류</div><div style="color: var(--red)">${esc(o.error)}</div>` : ""}
+        </div>`];
+
+      if (o.trace && o.trace.length) {
+        parts.push(o.trace.map((t, i) => `
+          <div class="trace-item ${t.is_error ? "error" : ""}">
+            <div class="row"><span class="muted small">${i + 1}</span><span class="name">${esc(t.tool)}</span>
+              ${t.is_error ? `<span class="badge red">오류</span>` : ""}</div>
+            <pre class="json">입력: ${esc(JSON.stringify(t.input, null, 2))}</pre>
+            <pre class="json">결과: ${esc(JSON.stringify(t.output, null, 2))}</pre>
+          </div>`).join(""));
+      } else {
+        parts.push(`<div class="muted small">호출한 도구 없음</div>`);
+      }
+      $("turn").innerHTML = parts.join("");
+    }
+
+    function renderCustomerState(data) {
+      const quotes = data.quotes.map((q) => `
+        <div class="trace-item">
+          <div class="row"><b>${esc(q["견적ID"])}</b><span class="badge ${q["상태"] === "견적대기" ? "amber" : "blue"}">${esc(q["상태"])}</span>
+            <span class="muted small">${esc(q["서비스"])}</span></div>
+          <div class="small" style="margin-top: 4px;">${esc(q["상세내용"])}</div>
+          ${q["상태"] === "견적대기" ? `
+            <div class="quote-form">
+              <input placeholder="금액 (예: 350000)" data-amount="${esc(q["견적ID"])}">
+              <input placeholder="견적 내용 (사장님 입장에서 입력)" data-content="${esc(q["견적ID"])}">
+              <button class="primary" data-ready="${esc(q["견적ID"])}">견적 발송</button>
+            </div>` : `<div class="small muted">금액: ${esc(q["견적금액"] || "-")} / ${esc(q["견적내용"] || "")}</div>`}
+        </div>`).join("");
+      const appts = data.appointments.map((a) => `
+        <div class="trace-item"><b>${esc(a["유형"])}</b> ${esc(a["시작"])} ~ ${esc(a["종료"].slice(11))}
+          <div class="muted small">${esc(a["메모"])}</div></div>`).join("");
+      $("customer-state").className = "";
+      $("customer-state").innerHTML = (quotes || appts)
+        ? `${quotes}${appts}`
+        : `<div class="empty">진행 중인 견적이나 일정이 없습니다.</div>`;
+    }
+
+    $("customer-state").addEventListener("click", async (e) => {
+      const id = e.target.dataset.ready;
+      if (!id) return;
+      const amount = document.querySelector(`[data-amount="${id}"]`).value.trim();
+      const content = document.querySelector(`[data-content="${id}"]`).value.trim();
+      if (!amount) return alert("금액을 입력하세요");
+      e.target.disabled = true;
+      e.target.textContent = "AI가 안내 중...";
+      await api(`/quotes/${id}/ready`, { method: "POST", body: { amount, content } });
+      refresh();
+    });
+
+    async function refresh() {
+      if (!phone()) return;
+      const [conv, notifs] = await Promise.all([api(`/conversations/${phone()}`), api("/notifications")]);
+      if (!busy) renderThread($("thread"), conv.messages, "customer");
+      if (!$("customer-state").contains(document.activeElement)) renderCustomerState(conv);
+      renderNotifications($("notifications"), notifs);
+    }
+
+    ensureSession().then(() => {
+    renderTopbar("test").then((status) => {
+      $("phone-title").textContent = status.business_name;
+      refresh();
+      startPolling(() => { if (!busy) refresh(); }, 3000);
+    });
+    });
+    $("phone").addEventListener("change", refresh);
+  </script>
+</body>
+</html>

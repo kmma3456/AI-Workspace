@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>고객 대화 - AI 직원</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="/ui/admin.css?v=49">
+</head>
+<body class="dash-app">
+  <aside class="dash-sidebar">
+    <div class="dash-brand">
+      <div class="dash-brand-icon">AI</div>
+      <div>
+        <h1>AI 직원</h1>
+        <p>24시간 응대하는<br>우리 매장의 AI 비서</p>
+      </div>
+    </div>
+    <div class="dash-sidebar-user">
+      <span class="dash-sidebar-user-meta"><span class="dot"></span><span class="dash-sidebar-user-name" id="sidebar-business">OO업체</span></span>
+      <button type="button" class="dash-sidebar-logout" id="btn-logout">로그아웃</button>
+    </div>
+    <nav class="dash-nav">
+      <a href="/ui/admin.html"><span class="ico ico-home"></span> 직원 데스크</a>
+      <a href="/ui/conversations.html" class="active"><span class="ico ico-chat"></span> 고객 대화</a>
+      <a href="/ui/activity.html"><span class="ico ico-clock"></span> 전체 활동</a>
+      <a href="/ui/intake-memos.html"><span class="ico ico-list"></span> 접수 메모 <span class="dash-nav-badge" id="nav-intake-badge" hidden></span></a>
+      <a href="/ui/settings.html"><span class="ico ico-gear"></span> 운영 설정</a>
+      <a href="/ui/accounts.html"><span class="ico ico-doc"></span> 계정 관리</a>
+    </nav>
+  </aside>
+
+  <div class="dash-main dash-main--sub">
+    <div class="dash-subpage dash-subpage--conversations">
+      <header class="dash-subpage-head">
+        <h1>고객 대화</h1>
+        <p class="dash-subpage-desc">고객별 문자·전화 이력을 검색하고 사장님이 직접 답장할 수 있습니다.</p>
+      </header>
+
+      <div class="dash-conversations-grid">
+        <div class="dash-panel dash-panel--inbox">
+          <div class="dash-inbox-head">
+            <div class="dash-inbox-title">
+              <h3>대화 목록</h3>
+              <span class="dash-inbox-badge" id="inbox-count" hidden>0</span>
+            </div>
+            <input type="search" id="inbox-search" class="dash-inbox-search dash-inbox-search--show" placeholder="이름·번호 검색" aria-label="검색">
+          </div>
+          <div class="dash-tabs dash-tabs--segment" id="inbox-tabs">
+            <button type="button" class="active" data-filter="all">전체</button>
+            <button type="button" data-filter="phone">전화</button>
+            <button type="button" data-filter="sms">문자</button>
+          </div>
+          <div class="dash-inbox-list" id="conv-list"></div>
+        </div>
+
+        <div class="dash-panel dash-panel--chat">
+          <div class="dash-chat-head">
+            <div class="dash-chat-head-row">
+              <button type="button" class="dash-chat-back" id="btn-chat-back" hidden aria-label="목록으로">‹</button>
+              <div class="dash-chat-customer">
+                <div class="dash-chat-avatar" id="conv-avatar" aria-hidden="true">—</div>
+                <div class="dash-chat-who">
+                  <div class="title" id="conv-title">대화를 선택하세요</div>
+                  <div class="meta" id="conv-meta">목록에서 고객을 선택하세요</div>
+                  <div class="dash-chat-badges" id="conv-badges"></div>
+                </div>
+              </div>
+              <div class="dash-chat-actions">
+                <button type="button" class="dash-chat-info" id="btn-customer-info" disabled>고객 정보</button>
+              </div>
+            </div>
+            <div class="dash-chat-head-meta" id="conv-head-meta" hidden>
+              <span class="dash-chat-channel-pill" id="conv-channel-pill"></span>
+              <time class="dash-chat-datetime" id="conv-datetime"></time>
+            </div>
+          </div>
+          <div class="thread dash-thread" id="thread"></div>
+          <div class="dash-chips" id="reply-chips">
+            <button type="button" class="dash-chip" data-chip="정확한 견적을 위해 현장 사진과 주소를 문자로 보내주시면 검토 후 안내드리겠습니다.">견적 안내</button>
+            <button type="button" class="dash-chip" data-chip="방문 일정 조율을 위해 희망 날짜와 시간대를 알려주세요.">방문 일정 문의</button>
+            <button type="button" class="dash-chip" data-chip="문의해 주셔서 감사합니다. 추가로 궁금한 점이 있으면 편하게 말씀해 주세요.">감사 인사</button>
+          </div>
+          <div class="dash-compose">
+            <div class="dash-compose-field">
+              <textarea id="reply" placeholder="사장님이 직접 답장 (문자로 발송)" disabled></textarea>
+            </div>
+            <button type="button" id="btn-reply" class="dash-compose-send" disabled>보내기 ▶</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/ui/common.js"></script>
+  <script src="/ui/dash-shared.js?v=5"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let selected = null;
+    const chatGrid = document.querySelector(".dash-conversations-grid");
+    const refreshMobileChat = syncMobileChatSplit(chatGrid, () => selected);
+    chatGrid._mobileChatClear = () => {
+      selected = null;
+      $("reply").disabled = true;
+      $("btn-reply").disabled = true;
+      $("btn-customer-info").disabled = true;
+      renderInboxList();
+      refreshMobileChat();
+    };
+    let inboxFilter = "all";
+    let inboxSearch = "";
+    let allConversations = [];
+    const STATUS_BADGE = { "견적대기": "amber", "견적완료": "blue", "견적발송": "blue", "일정확정": "green" };
+
+    function matchFilter(row) {
+      if (inboxFilter === "all") return true;
+      if (inboxFilter === "phone") return row.last_source === "template";
+      return row.last_source !== "template";
+    }
+    function matchSearch(row) {
+      if (!inboxSearch) return true;
+      const q = inboxSearch.toLowerCase();
+      return (row.name || "").toLowerCase().includes(q) || (row.phone || "").includes(q) || (row.last_content || "").toLowerCase().includes(q);
+    }
+    function inboxDisplayName(row) {
+      const base = row.name || fmtPhone(row.phone);
+      return /고객/.test(base) ? base : `${base} 고객님`;
+    }
+    function inboxInitial(row) {
+      const label = (row.name || fmtPhone(row.phone) || "?").trim();
+      const ch = label.replace(/[^\dA-Za-z가-힣]/g, "").charAt(0);
+      return ch ? ch.toUpperCase() : "고";
+    }
+    function inboxPreviewPrefix(source) {
+      const map = { template: "자동문자", ai: "AI", customer: "고객", owner: "사장님" };
+      return `${map[source] || "문자"}:`;
+    }
+    function fmtChatHeaderTime(iso) {
+      const d = new Date(iso);
+      const wd = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
+      const md = `${d.getMonth() + 1}. ${d.getDate()}.`;
+      const tm = d.toLocaleString("ko-KR", { hour: "numeric", minute: "2-digit", hour12: true });
+      return `${md} (${wd}) ${tm}`;
+    }
+    function channelPillLabel(source) {
+      return source === "template" ? "전화 문의" : "문자 상담";
+    }
+    function msgAvatar(source, customerInitial) {
+      if (source === "customer") return customerInitial;
+      if (source === "owner") return "사";
+      return "AI";
+    }
+    function renderDashThread(container, messages, customerInitial) {
+      const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 48;
+      if (!messages.length) {
+        container.innerHTML = `<div class="dash-empty">아직 대화가 없습니다</div>`;
+        return;
+      }
+      container.innerHTML = messages.map((m) => {
+        const isCustomer = m.source === "customer";
+        const side = isCustomer ? "left" : "right";
+        const av = msgAvatar(m.source, customerInitial);
+        const avClass = isCustomer ? "customer" : (m.source === "owner" ? "owner" : "ai");
+        return `
+          <div class="dash-msg dash-msg--${side} source-${esc(m.source)}">
+            <div class="dash-msg-avatar dash-msg-avatar--${avClass}">${esc(av)}</div>
+            <div class="dash-msg-body">
+              <div class="dash-msg-bubble">${esc(m.content)}</div>
+              <time class="dash-msg-time" datetime="${esc(m.created_at)}">${fmtChatMessageTime(m.created_at)}</time>
+            </div>
+          </div>`;
+      }).join("");
+      if (atBottom) container.scrollTop = container.scrollHeight;
+    }
+
+    function tabCounts() {
+      const phone = allConversations.filter((r) => r.last_source === "template").length;
+      const sms = allConversations.length - phone;
+      document.querySelector("#inbox-tabs button[data-filter='all']").textContent = `전체 (${allConversations.length})`;
+      document.querySelector("#inbox-tabs button[data-filter='phone']").textContent = `전화 (${phone})`;
+      document.querySelector("#inbox-tabs button[data-filter='sms']").textContent = `문자 (${sms})`;
+      const badge = $("inbox-count");
+      badge.textContent = String(allConversations.length);
+      badge.hidden = allConversations.length === 0;
+    }
+    function renderInboxList() {
+      const rows = allConversations.filter(matchFilter).filter(matchSearch);
+      $("conv-list").innerHTML = rows.length ? rows.map((r) => `
+        <div class="dash-inbox-item ${r.phone === selected ? "active" : ""}" data-phone="${esc(r.phone)}">
+          <div class="avatar">${esc(inboxInitial(r))}</div>
+          <div class="dash-inbox-item-body">
+            <div class="row1">
+              <span class="name">${esc(inboxDisplayName(r))}</span>
+              <span class="time">${fmtInboxTime(r.last_at)}</span>
+            </div>
+            <div class="preview"><span class="preview-prefix">${esc(inboxPreviewPrefix(r.last_source))}</span> ${esc(r.last_content)}</div>
+          </div>
+        </div>`).join("") : `<div class="dash-empty"><div class="icon">📭</div>대화가 없습니다</div>`;
+    }
+
+    async function refreshConversations() {
+      allConversations = await api("/conversations");
+      tabCounts();
+      renderInboxList();
+    }
+
+    async function refreshThread(scrollToBottom = false) {
+      if (!selected) {
+        $("thread").innerHTML = `<div class="dash-empty">왼쪽에서 고객을 선택하세요</div>`;
+        $("conv-title").textContent = "대화를 선택하세요";
+        $("conv-meta").textContent = "목록에서 고객을 선택하세요";
+        $("conv-avatar").textContent = "—";
+        $("conv-head-meta").hidden = true;
+        $("conv-badges").innerHTML = "";
+        return;
+      }
+      const data = await api(`/conversations/${selected}`);
+      const name = data.customer?.["이름"] || "";
+      const who = name || fmtPhone(selected);
+      $("conv-title").textContent = /고객/.test(who) ? who : `${who} 고객님`;
+      $("conv-meta").textContent = fmtPhone(selected);
+      $("conv-avatar").textContent = inboxInitial({ name, phone: selected });
+      const last = data.messages.at(-1);
+      const hasPhone = data.messages.some((m) => m.source === "template");
+      $("conv-channel-pill").textContent = channelPillLabel(hasPhone ? "template" : "customer");
+      $("conv-datetime").textContent = last ? fmtChatHeaderTime(last.created_at) : "";
+      $("conv-head-meta").hidden = false;
+      $("conv-badges").innerHTML = [
+        ...data.quotes.map((q) => `<span class="badge ${STATUS_BADGE[q["상태"]] || ""}">${esc(q["견적ID"])} ${esc(q["상태"])}</span>`),
+        ...data.appointments.map((a) => `<span class="badge green">${esc(a["유형"])} ${esc(a["시작"].slice(5))}</span>`),
+      ].join(" ");
+      renderDashThread($("thread"), data.messages, inboxInitial({ name, phone: selected }));
+      if (scrollToBottom) $("thread").scrollTop = $("thread").scrollHeight;
+    }
+
+    document.querySelectorAll("#inbox-tabs button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#inbox-tabs button").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        inboxFilter = btn.dataset.filter;
+        renderInboxList();
+      });
+    });
+    $("inbox-search").addEventListener("input", (e) => {
+      inboxSearch = e.target.value.trim();
+      renderInboxList();
+    });
+    $("conv-list").addEventListener("click", (e) => {
+      const item = e.target.closest(".dash-inbox-item");
+      if (!item) return;
+      selected = item.dataset.phone;
+      $("reply").disabled = $("btn-reply").disabled = false;
+      $("btn-customer-info").disabled = false;
+      renderInboxList();
+      refreshThread(true);
+      refreshMobileChat();
+    });
+    $("btn-customer-info").addEventListener("click", async () => {
+      if (!selected) return;
+      const data = await api(`/conversations/${selected}`);
+      const c = data.customer;
+      alert(c ? `이름: ${c["이름"] || "-"}\n메모: ${c["메모"] || "-"}` : "등록된 고객 정보가 없습니다.");
+    });
+    document.querySelectorAll("#reply-chips button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if ($("reply").disabled) return;
+        $("reply").value = btn.dataset.chip;
+        $("reply").focus();
+      });
+    });
+    $("btn-reply").addEventListener("click", async () => {
+      const text = $("reply").value.trim();
+      if (!selected || !text) return;
+      $("btn-reply").disabled = true;
+      try {
+        await api(`/conversations/${selected}/reply`, { method: "POST", body: { text } });
+        $("reply").value = "";
+        await refreshThread(true);
+        await refreshConversations();
+      } finally {
+        $("btn-reply").disabled = false;
+      }
+    });
+
+    const params = new URLSearchParams(location.search);
+    const phoneParam = params.get("phone");
+    if (phoneParam) selected = phoneParam.replace(/\D/g, "");
+
+    async function load() {
+      await refreshSidebarBusiness();
+      await refreshConversations();
+      if (selected) {
+        $("reply").disabled = $("btn-reply").disabled = false;
+        $("btn-customer-info").disabled = false;
+        renderInboxList();
+        await refreshThread(true);
+      }
+      refreshMobileChat();
+    }
+
+    ensureSession().then(() => {
+    load();
+    startPolling(() => {
+      if (document.hidden) return;
+      refreshConversations();
+      refreshSidebarBusiness();
+      if (selected) refreshThread();
+    }, 6000);
+    });
+  </script>
+</body>
+</html>

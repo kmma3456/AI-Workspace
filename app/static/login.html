@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>로그인 - 차산후</title>
+  <script>
+    const next = new URLSearchParams(location.search).get("next") || "";
+    location.replace(next.startsWith("/ui/") ? `/?next=${encodeURIComponent(next)}` : "/");
+  </script>
+</head>
+<body></body>
+</html>

@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>차산후 AI 워크스페이스</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="/ui/home.css?v=7">
+</head>
+<body class="hq">
+  <div class="hq-bg" aria-hidden="true"></div>
+
+  <section class="hq-gate" id="hq-gate" hidden>
+    <div class="hq-gate-card">
+      <div class="hq-brand">
+        <span class="hq-logo" aria-hidden="true">AI</span>
+        <div>
+          <p class="hq-company">차산후</p>
+          <h1>AI 워크스페이스</h1>
+        </div>
+      </div>
+      <p class="hq-lead">워크스페이스에 들어가려면 로그인하세요.</p>
+      <form id="login-form" class="hq-login">
+        <label>
+          <span>이메일</span>
+          <input type="email" id="login-email" autocomplete="username" required placeholder="you@example.com">
+        </label>
+        <label>
+          <span>비밀번호</span>
+          <input type="password" id="login-password" autocomplete="current-password" required minlength="8">
+        </label>
+        <p class="hq-login-error" id="login-error" hidden></p>
+        <button type="submit">로그인</button>
+      </form>
+    </div>
+  </section>
+
+  <div id="hq-office" hidden>
+    <header class="hq-top">
+      <div class="hq-brand-row">
+        <div class="hq-brand">
+          <span class="hq-logo" aria-hidden="true">AI</span>
+          <div>
+            <p class="hq-company" id="hq-company">차산후</p>
+            <h1>AI 워크스페이스</h1>
+          </div>
+        </div>
+        <button type="button" class="hq-logout" id="hq-logout">로그아웃</button>
+      </div>
+      <p class="hq-lead">AI 직원을 고용하고 관리하는 워크스페이스입니다.</p>
+    </header>
+
+    <main class="hq-floor">
+      <section class="hq-on-duty" aria-labelledby="hq-on-duty-title">
+        <p class="hq-kicker"><span class="hq-live-dot" aria-hidden="true"></span> 오늘 출근</p>
+        <a class="hq-staff" id="desk-live" href="/ui/admin.html">
+          <div class="hq-staff-copy">
+            <span class="hq-badge hq-badge--on">근무 중</span>
+            <h2 id="hq-on-duty-title">AI 고객센터</h2>
+            <p class="hq-role">전화 · 문자</p>
+            <p class="hq-copy">문의에 답하고, 견적을 접수하고, 상담 일정을 잡습니다.</p>
+            <span class="hq-cta">데스크 열기</span>
+          </div>
+        </a>
+      </section>
+
+      <section class="hq-seats" aria-labelledby="hq-seats-title">
+        <div class="hq-seats-head">
+          <h2 id="hq-seats-title">다음 자리</h2>
+          <p>아직 비어 있습니다. 직원이 추가되면 여기에 표시됩니다.</p>
+        </div>
+        <div class="hq-seats-grid">
+          <article class="hq-seat">
+            <div class="hq-seat-mark" aria-hidden="true">+</div>
+            <div class="hq-seat-body">
+              <h3>빈 자리</h3>
+              <p>다음 직원이 앉을 자리</p>
+            </div>
+            <span class="hq-badge">준비 중</span>
+          </article>
+          <article class="hq-seat">
+            <div class="hq-seat-mark" aria-hidden="true">+</div>
+            <div class="hq-seat-body">
+              <h3>빈 자리</h3>
+              <p>한 명씩 추가될 자리</p>
+            </div>
+            <span class="hq-badge">준비 중</span>
+          </article>
+          <article class="hq-seat">
+            <div class="hq-seat-mark" aria-hidden="true">+</div>
+            <div class="hq-seat-body">
+              <h3>빈 자리</h3>
+              <p>지금은 비워 둡니다</p>
+            </div>
+            <span class="hq-badge">준비 중</span>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="hq-foot">
+      <a href="/ui/test.html">테스트 채팅</a>
+    </footer>
+  </div>
+
+  <script>
+    const gate = document.getElementById("hq-gate");
+    const office = document.getElementById("hq-office");
+    const next = new URLSearchParams(location.search).get("next") || "";
+
+    function safeNext(value) {
+      return value.startsWith("/ui/") && !value.startsWith("//") ? value : "";
+    }
+
+    function showOffice() {
+      gate.hidden = true;
+      office.hidden = false;
+      fetch("/api/status", { credentials: "same-origin" }).then((r) => r.ok ? r.json() : null).then((data) => {
+        if (data?.business_name) document.getElementById("hq-company").textContent = data.business_name;
+      }).catch(() => {});
+    }
+
+    function showGate() {
+      office.hidden = true;
+      gate.hidden = false;
+    }
+
+    fetch("/api/auth/me", { credentials: "same-origin" }).then((r) => {
+      if (!r.ok) {
+        showGate();
+        return;
+      }
+      const dest = safeNext(next);
+      if (dest) location.replace(dest);
+      else showOffice();
+    }).catch(() => showGate());
+
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const err = document.getElementById("login-error");
+      err.hidden = true;
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: document.getElementById("login-email").value.trim(),
+            password: document.getElementById("login-password").value,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.detail || "로그인에 실패했습니다.");
+        }
+        const dest = safeNext(next);
+        if (dest) location.replace(dest);
+        else showOffice();
+      } catch (ex) {
+        err.textContent = ex.message || "로그인에 실패했습니다.";
+        err.hidden = false;
+      }
+    });
+
+    document.getElementById("hq-logout").addEventListener("click", async () => {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+      location.replace("/");
+    });
+  </script>
+</body>
+</html>
